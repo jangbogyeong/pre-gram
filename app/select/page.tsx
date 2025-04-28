@@ -5,7 +5,7 @@ import { useProject } from "@/contexts/project-context"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
-import { Grid, LogOut } from "lucide-react"
+import { Grid, Video, LogOut } from "lucide-react"
 import { motion } from "framer-motion"
 
 export default function SelectPage() {
@@ -13,9 +13,9 @@ export default function SelectPage() {
   const { createProject } = useProject()
   const { user, logout } = useAuth()
 
-  const handleSelect = () => {
-    const newProject = createProject("feed")
-    router.push(`/editor?type=feed&id=${newProject.id}`)
+  const handleSelect = (type: "feed" | "reels") => {
+    const newProject = createProject(type)
+    router.push(`/editor?type=${type}&id=${newProject.id}`)
   }
 
   return (
@@ -39,19 +39,33 @@ export default function SelectPage() {
           transition={{ duration: 0.5 }}
           className="max-w-md w-full"
         >
-          <h1 className="text-2xl font-bold mb-10 text-center">Preview your Instagram feed</h1>
+          <h1 className="text-2xl font-bold mb-10 text-center">What would you like to preview?</h1>
 
           <div className="space-y-6">
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }} className="transition-all">
               <Button
                 variant="outline"
                 className="w-full p-8 flex flex-col items-center justify-center gap-4 h-auto border-2 rounded-xl hover:bg-primary/5 hover:border-primary/30"
-                onClick={handleSelect}
+                onClick={() => handleSelect("feed")}
               >
                 <Grid className="h-12 w-12 text-blue-500" />
                 <div>
-                  <h2 className="text-xl font-semibold">Feed 구성하기</h2>
+                  <h2 className="text-xl font-semibold">Feed 탭 구성하기</h2>
                   <p className="text-muted-foreground mt-1">Square grid layout for your profile</p>
+                </div>
+              </Button>
+            </motion.div>
+
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }} className="transition-all">
+              <Button
+                variant="outline"
+                className="w-full p-8 flex flex-col items-center justify-center gap-4 h-auto border-2 rounded-xl hover:bg-primary/5 hover:border-primary/30"
+                onClick={() => handleSelect("reels")}
+              >
+                <Video className="h-12 w-12 text-red-500" />
+                <div>
+                  <h2 className="text-xl font-semibold">Reels 탭 구성하기</h2>
+                  <p className="text-muted-foreground mt-1">Vertical layout for Reels content</p>
                 </div>
               </Button>
             </motion.div>

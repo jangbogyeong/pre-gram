@@ -47,38 +47,27 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   // 로컬 스토리지에서 프로젝트 불러오기
   useEffect(() => {
-    try {
-      const storedProjects = localStorage.getItem("pre-gram-projects")
-      if (storedProjects) {
+    const storedProjects = localStorage.getItem("pre-gram-projects")
+    if (storedProjects) {
+      try {
         const parsedProjects = JSON.parse(storedProjects)
         // Date 객체로 변환
         const projectsWithDates = parsedProjects.map((project: any) => ({
           ...project,
           createdAt: new Date(project.createdAt),
           updatedAt: new Date(project.updatedAt),
-          // File 객체 복원 (File 객체는 직렬화되지 않으므로 빈 File 객체로 대체)
-          images: project.images.map((img: any) => ({
-            ...img,
-            file: new File([], img.file.name || "image.jpg", { type: img.file.type || "image/jpeg" }),
-          })),
         }))
         setProjects(projectsWithDates)
+      } catch (error) {
+        console.error("Failed to parse stored projects:", error)
       }
-    } catch (error) {
-      console.error("Failed to parse stored projects:", error)
-      // 오류 발생 시 빈 배열로 초기화
-      setProjects([])
     }
   }, [])
 
   // 프로젝트 변경 시 로컬 스토리지에 저장
   useEffect(() => {
     if (projects.length > 0) {
-      try {
-        localStorage.setItem("pre-gram-projects", JSON.stringify(projects))
-      } catch (error) {
-        console.error("Failed to save projects to localStorage:", error)
-      }
+      localStorage.setItem("pre-gram-projects", JSON.stringify(projects))
     }
   }, [projects])
 
@@ -118,11 +107,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const duplicateProject = useCallback(
     (projectId: string): Project => {
       const projectToDuplicate = projects.find((p) => p.id === projectId)
-      if (!projectToDuplicate) {
-        console.error(`Project with id ${projectId} not found for duplication`)
-        // 프로젝트를 찾을 수 없는 경우 새 프로젝트 생성
-        return createProject("feed")
-      }
+      if (!projectToDuplicate) throw new Error("Project not found")
 
       // 이미지 파일은 복제할 수 없으므로 참조만 복사
       const duplicatedProject: Project = {
@@ -136,7 +121,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       setProjects((prev) => [...prev, duplicatedProject])
       return duplicatedProject
     },
-    [projects, createProject],
+    [projects],
   )
 
   // 완전히 재작성된 addImagesToProject 함수
@@ -206,13 +191,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   const reorderImages = useCallback(
     (projectId: string, reorderedImages: ImageItem[]) => {
-      // 프로젝트 존재 여부 확인
-      const projectExists = projects.some((p) => p.id === projectId)
-      if (!projectExists) {
-        console.error(`ProjectContext: Project with id ${projectId} not found for reordering`)
-        return
-      }
-
       setProjects((prev) =>
         prev.map((project) => {
           if (project.id === projectId) {
@@ -237,18 +215,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         })
       }
     },
-    [currentProject, projects],
+    [currentProject],
   )
 
   const removeImage = useCallback(
     (projectId: string, imageId: string) => {
-      // 프로젝트 존재 여부 확인
-      const projectExists = projects.some((p) => p.id === projectId)
-      if (!projectExists) {
-        console.error(`ProjectContext: Project with id ${projectId} not found for image removal`)
-        return
-      }
-
       setProjects((prev) =>
         prev.map((project) => {
           if (project.id === projectId) {
@@ -273,7 +244,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         })
       }
     },
-    [currentProject, projects],
+    [currentProject],
   )
 
   // useCallback으로 함수 메모이제이션

@@ -1,40 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context" // Use our custom auth context
+import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { FaGoogle, FaApple, FaFacebook } from "react-icons/fa"
 import { motion } from "framer-motion"
 import Image from "next/image"
-import { useToast } from "@/hooks/use-toast"
 
 export default function LoginPage() {
-  const router = useRouter()
-  const { login, user, isLoading: authLoading } = useAuth() // Use our custom auth hook
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState<string | null>(null)
 
-  // Redirect if already logged in
-  if (user && !authLoading) {
-    router.push("/instagram/connect")
-    return null
-  }
-
-  const handleLogin = async (provider: "google" | "apple" | "facebook") => {
-    setIsLoading(true)
+  const handleLogin = async (provider: string) => {
     try {
-      await login(provider)
-      // The auth context will handle the redirect
+      setIsLoading(provider)
+      await signIn(provider, { callbackUrl: "/connect-instagram" })
     } catch (error) {
       console.error("Login error:", error)
-      toast({
-        title: "Login failed",
-        description: "There was a problem signing in. Please try again.",
-        variant: "destructive",
-      })
-      setIsLoading(false)
     }
   }
 
@@ -64,28 +46,28 @@ export default function LoginPage() {
               variant="outline"
               className="w-full py-6 flex items-center justify-center gap-2"
               onClick={() => handleLogin("google")}
-              disabled={isLoading}
+              disabled={isLoading === "google"}
             >
               <FaGoogle className="h-5 w-5" />
-              <span>Sign in with Google</span>
+              <span>{isLoading === "google" ? "Signing in..." : "Sign in with Google"}</span>
             </Button>
             <Button
               variant="outline"
               className="w-full py-6 flex items-center justify-center gap-2"
               onClick={() => handleLogin("apple")}
-              disabled={isLoading}
+              disabled={isLoading === "apple"}
             >
               <FaApple className="h-5 w-5" />
-              <span>Sign in with Apple</span>
+              <span>{isLoading === "apple" ? "Signing in..." : "Sign in with Apple"}</span>
             </Button>
             <Button
               variant="outline"
               className="w-full py-6 flex items-center justify-center gap-2"
               onClick={() => handleLogin("facebook")}
-              disabled={isLoading}
+              disabled={isLoading === "facebook"}
             >
               <FaFacebook className="h-5 w-5" />
-              <span>Sign in with Facebook</span>
+              <span>{isLoading === "facebook" ? "Signing in..." : "Sign in with Facebook"}</span>
             </Button>
           </CardContent>
           <CardFooter className="flex flex-col text-center text-sm text-muted-foreground">

@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { Toaster } from "@/components/ui/toaster"
-import ClientWrapper from "./client-wrapper"
+import { SessionProvider } from "@/components/session-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -24,16 +24,16 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ClientWrapper>
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange={false}>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <SessionProvider>
             <AuthProvider>
               <ProjectProvider>
                 {children}
                 <Toaster />
               </ProjectProvider>
             </AuthProvider>
-          </ThemeProvider>
-        </ClientWrapper>
+          </SessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
+import { useSession, signOut } from "next-auth/react"
 
 interface User {
   id: string
@@ -15,8 +15,8 @@ interface User {
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  login: (provider: "google" | "apple" | "facebook") => Promise<void>
-  logout: () => Promise<void>
+  login: (provider: "google" | "apple" | "facebook") => void
+  logout: () => void
   updateUser: (updatedUser: User) => void // 사용자 정보 업데이트 함수
 }
 
@@ -27,89 +27,99 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const pathname = usePathname()
-  const { toast } = useToast()
+  const { data: session, status } = useSession()
 
-  // 개발 환경에서 사용자 정보 로드
+  // NextAuth 세션에서 사용자 정보 불러오기
   useEffect(() => {
-    const loadUser = async () => {
-      setIsLoading(true)
+    if (status === "authenticated" && session?.user) {
+      // NextAuth 세션에서 사용자 정보 가져오기
+      const nextAuthUser = session.user
 
-      try {
-        // 로컬 스토리지에서 사용자 정보 가져오기
+      // 로컬 스토리지에서 추가 정보 가져오기
+      let storedUserData = null
+      if (typeof window !== "undefined") {
         const storedUser = localStorage.getItem("pre-gram-user")
-
         if (storedUser) {
-          // 저장된 사용자 정보가 있으면 사용
-          const parsedUser = JSON.parse(storedUser)
-          setUser(parsedUser)
-        } else {
-          // 저장된 사용자 정보가 없으면 null 상태 유지
-          setUser(null)
+          try {
+            storedUserData = JSON.parse(storedUser)
+          } catch (e) {
+            console.error("Failed to parse stored user data:", e)
+          }
         }
-      } catch (error) {
-        console.error("Failed to load user:", error)
-      } finally {
-        setIsLoading(false)
       }
+
+      // 사용자 정보 병합
+      const mergedUser: User = {
+        id: nextAuthUser.id || nextAuthUser.email || "",
+        name: nextAuthUser.name || "User",
+        email: nextAuthUser.email || "",
+        provider: (storedUserData?.provider || "google") as "google" | "apple" | "facebook",
+        maxAccounts: storedUserData?.maxAccounts || 1,
+      }
+
+      setUser(mergedUser)
+
+      // 로컬 스토리지에 업데이트된 사용자 정보 저장
+      if (typeof window !== "undefined") {
+        localStorage.setItem("pre-gram-user", JSON.stringify(mergedUser))
+      }
+    } else if (status === "unauthenticated") {
+      setUser(null)
     }
 
-    loadUser()
-  }, [])
+    setIsLoading(status === "loading")
+  }, [session, status])
 
-  // 로그인 가드
+  // 로그인 가드 처리 수정
   useEffect(() => {
-    if (!isLoading && !user && pathname !== "/login" && !pathname.startsWith("/instagram")) {
-      router.push("/login")
+    if (!isLoading) {
+      const publicPaths = ["/login", "/connect-instagram"]
+      if (!user && !publicPaths.includes(pathname)) {
+        router.push("/login")
+      }
     }
   }, [user, isLoading, pathname, router])
 
-  // 로그인 함수
-  const login = async (provider: "google" | "apple" | "facebook") => {
-    try {
-      setIsLoading(true)
-
-      // 개발 환경에서는 항상 모의 사용자 생성
-      const mockUser = {
-        id: `user-${Math.random().toString(36).substr(2, 9)}`,
-        name: `Test User (${provider})`,
-        email: `user-${Math.random().toString(36).substr(2, 9)}@example.com`,
-        provider,
-        maxAccounts: 1,
-      }
-
-      setUser(mockUser)
-      localStorage.setItem("pre-gram-user", JSON.stringify(mockUser))
-      router.push("/instagram/connect")
-    } catch (error) {
-      console.error(`${provider} login error:`, error)
-      toast({
-        title: "Login failed",
-        description: "There was a problem signing in. Please try again.",
-        variant: "destructive",
-      })
-      throw error
-    } finally {
-      setIsLoading(false)
-    }
+  // 로그인 함수 수정 - NextAuth 사용
+  const login = (provider: "google" | "apple" | "facebook") => {
+    console.log(`${provider} login clicked - using NextAuth`)
+    // 실제 로그인은 login 페이지에서 처리
   }
 
-  // 로그아웃 함수
-  const logout = async () => {
-    try {
+  const logout = () => {
+    signOut({ redirect: false }).then(() => {
       setUser(null)
-      localStorage.removeItem("pre-gram-user")
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("pre-gram-user")
+      }
       router.push("/login")
-    } catch (error) {
-      console.error("Logout error:", error)
-      throw error
-    }
+    })
   }
 
   // 사용자 정보 업데이트 함수
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser)
-    localStorage.setItem("pre-gram-user", JSON.stringify(updatedUser))
+    if (typeof window !== "undefined") {
+      localStorage.setItem("pre-gram-user", JSON.stringify(updatedUser))
+    }
   }
+
+  // 개발 모드에서는 로그인 없이도 사용할 수 있도록 더미 사용자 생성
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development" && status === "unauthenticated" && !user) {
+      const dummyUser: User = {
+        id: "dev-user",
+        name: "Development User",
+        email: "dev@example.com",
+        provider: "google",
+        maxAccounts: 2,
+      }
+      setUser(dummyUser)
+      if (typeof window !== "undefined") {
+        localStorage.setItem("pre-gram-user", JSON.stringify(dummyUser))
+      }
+    }
+  }, [status, user])
 
   return <AuthContext.Provider value={{ user, isLoading, login, logout, updateUser }}>{children}</AuthContext.Provider>
 }

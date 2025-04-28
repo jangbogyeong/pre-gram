@@ -1,6 +1,7 @@
 "use client"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ImageType } from "@/types/image"
 import Image from "next/image"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -11,9 +12,16 @@ interface PreviewModalProps {
   isOpen: boolean
   onClose: () => void
   images: ImageType[]
+  activeTab: string
 }
 
-export default function PreviewModal({ isOpen, onClose, images }: PreviewModalProps) {
+// 미리보기에서 탭에 따라 비율 적용
+export default function PreviewModal({ isOpen, onClose, images, activeTab }: PreviewModalProps) {
+  // 이미지 비율에 따른 클래스 반환
+  const getAspectRatioClass = () => {
+    return activeTab === "feed" ? "aspect-[4/5]" : "aspect-[16/9]"
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl">
@@ -21,25 +29,56 @@ export default function PreviewModal({ isOpen, onClose, images }: PreviewModalPr
           <DialogTitle>인스타그램 미리보기</DialogTitle>
         </DialogHeader>
 
-        <div className="bg-white dark:bg-black rounded-md overflow-hidden">
-          <div className="p-4 border-b">
-            <div className="flex items-center">
-              <Avatar className="h-8 w-8 mr-3">
-                <AvatarImage src="/placeholder.svg?height=32&width=32" alt="@username" />
-                <AvatarFallback>UN</AvatarFallback>
-              </Avatar>
-              <div className="font-semibold">username</div>
-            </div>
-          </div>
+        <Tabs defaultValue={activeTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="feed">피드</TabsTrigger>
+            <TabsTrigger value="reels">릴스</TabsTrigger>
+          </TabsList>
 
-          <div className="grid grid-cols-3 gap-[2px]">
-            {images.map((image) => (
-              <div key={image.id} className="relative aspect-[4/5]">
-                <Image src={image.src || "/placeholder.svg"} alt="Instagram post" fill className="object-cover" />
+          <TabsContent value="feed">
+            <div className="bg-white dark:bg-black rounded-md overflow-hidden">
+              <div className="p-4 border-b">
+                <div className="flex items-center">
+                  <Avatar className="h-8 w-8 mr-3">
+                    <AvatarImage src="/placeholder.svg?height=32&width=32" alt="@username" />
+                    <AvatarFallback>UN</AvatarFallback>
+                  </Avatar>
+                  <div className="font-semibold">username</div>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
+
+              <div className="grid grid-cols-3 gap-[2px]">
+                {images.map((image) => (
+                  <div key={image.id} className="relative aspect-[4/5]">
+                    <Image src={image.src || "/placeholder.svg"} alt="Instagram post" fill className="object-cover" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="reels">
+            <div className="bg-white dark:bg-black rounded-md overflow-hidden">
+              <div className="p-4 border-b">
+                <div className="flex items-center">
+                  <Avatar className="h-8 w-8 mr-3">
+                    <AvatarImage src="/placeholder.svg?height=32&width=32" alt="@username" />
+                    <AvatarFallback>UN</AvatarFallback>
+                  </Avatar>
+                  <div className="font-semibold">username</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-[2px]">
+                {images.map((image) => (
+                  <div key={image.id} className="aspect-[16/9] relative">
+                    <Image src={image.src || "/placeholder.svg"} alt="Instagram reel" fill className="object-cover" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         <div className="mt-4">
           <h3 className="text-lg font-semibold mb-2">단일 포스트 미리보기</h3>
@@ -58,7 +97,7 @@ export default function PreviewModal({ isOpen, onClose, images }: PreviewModalPr
                 </Button>
               </div>
 
-              <div className="relative aspect-[4/5]">
+              <div className={`relative ${getAspectRatioClass()}`}>
                 <Image src={images[0].src || "/placeholder.svg"} alt="Instagram post" fill className="object-cover" />
               </div>
 
