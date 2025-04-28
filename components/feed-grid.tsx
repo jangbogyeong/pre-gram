@@ -204,6 +204,7 @@ function FeedGrid({ images, onReorder, onRemoveImage, readOnly = false }: FeedGr
   const [isReordering, setIsReordering] = useState(false)
   const prevImagesRef = useRef<ImageItem[]>([])
   const reorderTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const dragOperationInProgressRef = useRef(false)
 
   // 컴포넌트 언마운트 시 타임아웃 정리
   useEffect(() => {
@@ -216,6 +217,9 @@ function FeedGrid({ images, onReorder, onRemoveImage, readOnly = false }: FeedGr
 
   // 이미지 배열이 변경되었는지 확인
   useIsomorphicLayoutEffect(() => {
+    // 드래그 작업 중에는 이미지 업데이트 건너뛰기
+    if (dragOperationInProgressRef.current) return
+
     // 깊은 비교를 위해 JSON 문자열로 변환하여 비교
     const currentImagesJson = JSON.stringify(images.map((img) => img.id || ""))
     const prevImagesJson = JSON.stringify(prevImagesRef.current.map((img) => img.id || ""))
@@ -226,8 +230,13 @@ function FeedGrid({ images, onReorder, onRemoveImage, readOnly = false }: FeedGr
   }, [images])
 
   // 사용자 업로드 이미지와 기존 이미지 분리
-  const userUploadedImages = images.filter((img) => img.isUserUploaded === true)
-  const existingImages = images.filter((img) => img.isUserUploaded !== true)
+  const userUploadedImages = useMemo(() => {
+    return images.filter((img) => img.isUserUploaded === true)
+  }, [images])
+
+  const existingImages = useMemo(() => {
+    return images.filter((img) => img.isUserUploaded !== true)
+  }, [images])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -241,6 +250,7 @@ function FeedGrid({ images, onReorder, onRemoveImage, readOnly = false }: FeedGr
     (event: DragStartEvent) => {
       if (readOnly) return
 
+      dragOperationInProgressRef.current = true
       const { active } = event
       if (active && active.id) {
         setActiveId(String(active.id))
@@ -258,17 +268,21 @@ function FeedGrid({ images, onReorder, onRemoveImage, readOnly = false }: FeedGr
       // Reset active ID immediately to prevent UI jank
       setActiveId(null)
 
-      if (!over) return
-      if (active.id === over.id) return
+      if (!over) {
+        dragOperationInProgressRef.current = false
+        return
+      }
+
+      if (active.id === over.id) {
+        dragOperationInProgressRef.current = false
+        return
+      }
 
       // Find indices only once
       const oldIndex = userUploadedImages.findIndex((img) => img.id === active.id)
       const newIndex = userUploadedImages.findIndex((img) => img.id === over.id)
 
       if (oldIndex !== -1 && newIndex !== -1) {
-        // Prevent setting reordering state during the drag operation
-        // This reduces flickering by avoiding unnecessary renders
-
         // Create a new array with the reordered items
         const reorderedUserImages = arrayMove(userUploadedImages, oldIndex, newIndex)
         const reorderedImages = [...reorderedUserImages, ...existingImages]
@@ -283,7 +297,14 @@ function FeedGrid({ images, onReorder, onRemoveImage, readOnly = false }: FeedGr
             // Notify parent component of the reordering
             onReorder(reorderedImages)
           }
+
+          // Reset drag operation flag after a short delay
+          setTimeout(() => {
+            dragOperationInProgressRef.current = false
+          }, 100)
         })
+      } else {
+        dragOperationInProgressRef.current = false
       }
     },
     [userUploadedImages, existingImages, onReorder, readOnly, images],
@@ -297,6 +318,11 @@ function FeedGrid({ images, onReorder, onRemoveImage, readOnly = false }: FeedGr
     [onRemoveImage],
   )
 
+  // 이미지 ID 목록 메모이제이션
+  const sortableItems = useMemo(() => {
+    return userUploadedImages.map((img) => img.id || "")
+  }, [userUploadedImages])
+
   return (
     <div className="bg-background rounded-lg">
       <div className="grid grid-cols-3 gap-1">
@@ -307,7 +333,7 @@ function FeedGrid({ images, onReorder, onRemoveImage, readOnly = false }: FeedGr
           onDragEnd={handleDragEnd}
           autoScroll={{ threshold: { x: 0.2, y: 0.2 } }}
         >
-          <SortableContext items={userUploadedImages.map((img) => img.id || "")} strategy={rectSortingStrategy}>
+          <SortableContext items={sortableItems} strategy={rectSortingStrategy}>
             <AnimatePresence>
               {userUploadedImages.map((image) => (
                 <motion.div

@@ -100,6 +100,7 @@ const FeedCarousel = memo(
     const prevLayoutsRef = useRef<typeof layouts>([])
     const isScrollingRef = useRef(false)
     const layoutsLengthRef = useRef(layouts.length)
+    const scrollStateRef = useRef({ showLeft: false, showRight: true })
 
     // Only update the ref when layouts length changes
     useEffect(() => {
@@ -121,17 +122,20 @@ const FeedCarousel = memo(
         const newShowLeftArrow = scrollLeft > 0
         const newShowRightArrow = scrollLeft < scrollWidth - clientWidth - 10
 
-        if (newShowLeftArrow !== showLeftArrow) {
+        // Only update state if values actually changed
+        if (newShowLeftArrow !== scrollStateRef.current.showLeft) {
+          scrollStateRef.current.showLeft = newShowLeftArrow
           setShowLeftArrow(newShowLeftArrow)
         }
 
-        if (newShowRightArrow !== showRightArrow) {
+        if (newShowRightArrow !== scrollStateRef.current.showRight) {
+          scrollStateRef.current.showRight = newShowRightArrow
           setShowRightArrow(newShowRightArrow)
         }
 
         scrollUpdateTimeoutRef.current = null
       })
-    }, [showLeftArrow, showRightArrow])
+    }, [])
 
     // Check for actual layout changes before updating
     useEffect(() => {

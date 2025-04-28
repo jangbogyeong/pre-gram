@@ -126,6 +126,7 @@ export default function EditorPage() {
   const dummyImagesAddedRef = useRef(false)
   const redirectInProgressRef = useRef(false)
   const isProcessingRef = useRef(false)
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const projectId = searchParams.get("id")
   const type = "feed"
@@ -140,12 +141,15 @@ export default function EditorPage() {
   // 프로젝트 ID가 없거나 유효하지 않을 때 새 프로젝트 생성 및 리다이렉트
   const createAndRedirect = useCallback(() => {
     try {
-      const newProject = createProject("feed") // 항상 feed 타입으로 고정
+      if (redirectInProgressRef.current) return
       redirectInProgressRef.current = true
+
+      const newProject = createProject("feed") // 항상 feed 타입으로 고정
       router.replace(`/editor?type=feed&id=${newProject.id}`)
     } catch (error) {
       console.error("EditorPage: Error creating new project:", error)
       setIsLoading(false)
+      redirectInProgressRef.current = false
     }
   }, [createProject, router])
 
@@ -175,7 +179,14 @@ export default function EditorPage() {
       isUpdatingLayoutsRef.current = true
 
       // Deep comparison to prevent unnecessary updates
-      const layoutsChanged = JSON.stringify(layouts) !== JSON.stringify(newLayouts)
+      const currentLayoutsJson = JSON.stringify(
+        layouts.map((l) => ({ id: l.id, imageIds: l.images.map((img) => img.id) })),
+      )
+      const newLayoutsJson = JSON.stringify(
+        newLayouts.map((l) => ({ id: l.id, imageIds: l.images.map((img) => img.id) })),
+      )
+
+      const layoutsChanged = currentLayoutsJson !== newLayoutsJson
 
       if (layoutsChanged) {
         // Use requestAnimationFrame for smoother updates
@@ -280,6 +291,8 @@ export default function EditorPage() {
 
   // 로컬 스토리지에서 계정별 레이아웃 데이터 불러오기 - 컴포넌트 마운트 시 한 번만 실행
   useEffect(() => {
+    if (dataLoadedRef.current) return
+
     const loadAccountLayouts = () => {
       setIsLoading(true)
 
@@ -305,15 +318,24 @@ export default function EditorPage() {
   // 계정별 레이아웃 데이터 저장 - 디바운스 처리
   useEffect(() => {
     if (Object.keys(accountLayouts).length > 0 && dataLoadedRef.current) {
-      const saveTimeout = setTimeout(() => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+
+      debounceTimerRef.current = setTimeout(() => {
         try {
           localStorage.setItem("pre-gram-account-layouts", JSON.stringify(accountLayouts))
         } catch (error) {
           console.error("EditorPage: Failed to save account layouts:", error)
         }
+        debounceTimerRef.current = null
       }, 1000)
+    }
 
-      return () => clearTimeout(saveTimeout)
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
     }
   }, [accountLayouts])
 
@@ -379,7 +401,14 @@ export default function EditorPage() {
             const newLayouts = JSON.parse(JSON.stringify(storedLayouts))
 
             // 현재 레이아웃과 비교하여 변경된 경우에만 업데이트
-            if (JSON.stringify(layouts) !== JSON.stringify(newLayouts)) {
+            const currentLayoutsJson = JSON.stringify(
+              layouts.map((l) => ({ id: l.id, imageIds: l.images.map((img) => img.id) })),
+            )
+            const newLayoutsJson = JSON.stringify(
+              newLayouts.map((l) => ({ id: l.id, imageIds: l.images.map((img) => img.id) })),
+            )
+
+            if (currentLayoutsJson !== newLayoutsJson) {
               safelyUpdateLayouts(newLayouts)
             }
             layoutsInitializedRef.current = true
@@ -423,7 +452,11 @@ export default function EditorPage() {
     )
       return
 
-    const saveTimeout = setTimeout(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
       setAccountLayouts((prev) => {
         const updatedAccountLayouts = {
           ...prev,
@@ -434,9 +467,14 @@ export default function EditorPage() {
         }
         return updatedAccountLayouts
       })
+      debounceTimerRef.current = null
     }, 500)
 
-    return () => clearTimeout(saveTimeout)
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
   }, [layouts, currentAccount, currentProject])
 
   // 인스타그램 계정 변경 핸들러
@@ -449,32 +487,35 @@ export default function EditorPage() {
       accountSwitchingRef.current = true
       setIsLoading(true)
 
-      // Use requestAnimationFrame for smoother transitions
-      requestAnimationFrame(() => {
-        // Save current account data
-        if (currentAccount?.id && currentProject) {
-          setAccountLayouts((prev) => ({
-            ...prev,
-            [currentAccount.id]: {
-              layouts: [...layouts],
-              projectId: currentProject.id,
-            },
-          }))
-        }
+      // Save current account data
+      if (currentAccount?.id && currentProject) {
+        setAccountLayouts((prev) => ({
+          ...prev,
+          [currentAccount.id]: {
+            layouts: [...layouts],
+            projectId: currentProject.id,
+          },
+        }))
+      }
 
-        // Switch account with a slight delay
+      // Debounce account switching to prevent flickering
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+
+      debounceTimerRef.current = setTimeout(() => {
+        setCurrentAccount(account)
+        layoutsInitializedRef.current = false
+        dummyImagesAddedRef.current = false
+
+        // Reset flags after transition completes
         setTimeout(() => {
-          setCurrentAccount(account)
-          layoutsInitializedRef.current = false
-          dummyImagesAddedRef.current = false
+          accountSwitchingRef.current = false
+          setIsLoading(false)
+        }, 200)
 
-          // Reset flags after transition completes
-          setTimeout(() => {
-            accountSwitchingRef.current = false
-            setIsLoading(false)
-          }, 200)
-        }, 50)
-      })
+        debounceTimerRef.current = null
+      }, 300)
     },
     [currentAccount, currentProject, layouts],
   )
@@ -585,11 +626,12 @@ export default function EditorPage() {
           if (layoutIndex === -1) return prevLayouts
 
           const currentLayout = prevLayouts[layoutIndex]
-          const imagesChanged =
-            JSON.stringify(currentLayout.images.map((img) => img.id)) !==
-            JSON.stringify(reorderedImages.map((img) => img.id))
 
-          if (!imagesChanged) return prevLayouts
+          // Deep comparison to prevent unnecessary updates
+          const currentImagesJson = JSON.stringify(currentLayout.images.map((img) => img.id))
+          const reorderedImagesJson = JSON.stringify(reorderedImages.map((img) => img.id))
+
+          if (currentImagesJson === reorderedImagesJson) return prevLayouts
 
           // Create a new array with only the changed layout updated
           const updatedLayouts = [...prevLayouts]
@@ -783,7 +825,7 @@ export default function EditorPage() {
   // 리다이렉트 완료 후 플래그 리셋
   useEffect(() => {
     if (redirectInProgressRef.current && projectId) {
-      // 약간의 지연 후 리다이렉트 플래그 리셋이렉트 플래그 리셋
+      // 약간의 지연 후 리다이렉트 플래그 리셋
       const timer = setTimeout(() => {
         redirectInProgressRef.current = false
       }, 500)

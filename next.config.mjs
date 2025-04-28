@@ -9,7 +9,7 @@ const nextConfig = {
     unoptimized: true,
   },
   experimental: {
-    optimizeCss: true,
+    // Remove optimizeCss to fix the critters dependency issue
     scrollRestoration: true,
     optimisticClientCache: true,
     serverActions: {

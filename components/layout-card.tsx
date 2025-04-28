@@ -138,6 +138,46 @@ const LayoutCardContent = memo(function LayoutCardContent({
   )
 })
 
+// 이미지 파일 처리 함수
+const processImageFile = (file: File): Promise<ImageItem> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      if (!dataUrl) {
+        reject(new Error(`Failed to read file: ${file.name}`))
+        return
+      }
+
+      // 이미지 크기 가져오기
+      const img = new Image()
+      img.onload = () => {
+        resolve({
+          id: uuidv4(),
+          src: dataUrl,
+          file: file,
+          width: img.width,
+          height: img.height,
+          isUserUploaded: true, // 사용자가 업로드한 이미지임을 표시
+        })
+      }
+
+      img.onerror = () => {
+        reject(new Error(`Failed to load image: ${file.name}`))
+      }
+
+      img.src = dataUrl
+    }
+
+    reader.onerror = () => {
+      reject(new Error(`Error reading file: ${file.name}`))
+    }
+
+    reader.readAsDataURL(file)
+  })
+}
+
 // Optimize the main component with better state management
 function LayoutCard({
   id,
@@ -322,8 +362,6 @@ function LayoutCard({
   // Use the current value from the ref for rendering
   const currentImages = localImagesRef.current.length > 0 ? localImagesRef.current : images
 
-  const processImageFileMemoized = useCallback(processImageFile, [])
-
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -372,52 +410,6 @@ function LayoutCard({
       />
     </motion.div>
   )
-}
-
-// 이미지 파일 처리 함수
-const processImageFile = (file: File): Promise<ImageItem> => {
-  return new Promise((resolve, reject) => {
-    // 이미 처리 중인 파일은 건너뜁니다
-    // if (isProcessingRef.current) {
-    //   reject(new Error("Already processing files"))
-    //   return
-    // }
-
-    const reader = new FileReader()
-
-    reader.onload = () => {
-      const dataUrl = reader.result as string
-      if (!dataUrl) {
-        reject(new Error(`Failed to read file: ${file.name}`))
-        return
-      }
-
-      // 이미지 크기 가져오기
-      const img = new Image()
-      img.onload = () => {
-        resolve({
-          id: uuidv4(),
-          src: dataUrl,
-          file: file,
-          width: img.width,
-          height: img.height,
-          isUserUploaded: true, // 사용자가 업로드한 이미지임을 표시
-        })
-      }
-
-      img.onerror = () => {
-        reject(new Error(`Failed to load image: ${file.name}`))
-      }
-
-      img.src = dataUrl
-    }
-
-    reader.onerror = () => {
-      reject(new Error(`Error reading file: ${file.name}`))
-    }
-
-    reader.readAsDataURL(file)
-  })
 }
 
 export default memo(LayoutCard)
