@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { FaGoogle, FaApple, FaFacebook } from "react-icons/fa"
@@ -9,16 +8,7 @@ import { motion } from "framer-motion"
 import Image from "next/image"
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState<string | null>(null)
-
-  const handleLogin = async (provider: string) => {
-    try {
-      setIsLoading(provider)
-      await signIn(provider, { callbackUrl: "/connect-instagram" })
-    } catch (error) {
-      console.error("Login error:", error)
-    }
-  }
+  const { login } = useAuth()
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-background to-muted/50">
@@ -29,11 +19,14 @@ export default function LoginPage() {
         className="w-full max-w-md"
       >
         <div className="flex flex-col items-center mb-8">
-          <div className="relative w-24 h-24 mb-4">
-            <Image src="/placeholder.svg?height=96&width=96" alt="Pre-gram Logo" fill className="object-contain" />
+          <div className="relative w-48 h-16 mb-4">
+            <Image
+              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/pregram%20logo-wDnlv8EUftA6IZFH1XLM7ePNSGWTC9.png"
+              alt="Pregram Logo"
+              fill
+              className="object-contain"
+            />
           </div>
-          <h1 className="text-3xl font-bold">Pre-gram</h1>
-          <p className="text-muted-foreground mt-2">Preview your Instagram feed before posting</p>
         </div>
 
         <Card className="shadow-lg">
@@ -45,29 +38,26 @@ export default function LoginPage() {
             <Button
               variant="outline"
               className="w-full py-6 flex items-center justify-center gap-2"
-              onClick={() => handleLogin("google")}
-              disabled={isLoading === "google"}
+              onClick={() => login("google")}
             >
               <FaGoogle className="h-5 w-5" />
-              <span>{isLoading === "google" ? "Signing in..." : "Sign in with Google"}</span>
+              <span>Sign in with Google</span>
             </Button>
             <Button
               variant="outline"
               className="w-full py-6 flex items-center justify-center gap-2"
-              onClick={() => handleLogin("apple")}
-              disabled={isLoading === "apple"}
+              onClick={() => login("apple")}
             >
               <FaApple className="h-5 w-5" />
-              <span>{isLoading === "apple" ? "Signing in..." : "Sign in with Apple"}</span>
+              <span>Sign in with Apple</span>
             </Button>
             <Button
               variant="outline"
               className="w-full py-6 flex items-center justify-center gap-2"
-              onClick={() => handleLogin("facebook")}
-              disabled={isLoading === "facebook"}
+              onClick={() => login("facebook")}
             >
               <FaFacebook className="h-5 w-5" />
-              <span>{isLoading === "facebook" ? "Signing in..." : "Sign in with Facebook"}</span>
+              <span>Sign in with Facebook</span>
             </Button>
           </CardContent>
           <CardFooter className="flex flex-col text-center text-sm text-muted-foreground">

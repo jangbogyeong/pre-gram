@@ -36,7 +36,7 @@ export default function PreviewModal({ isOpen, onClose, images, activeTab }: Pre
           </TabsList>
 
           <TabsContent value="feed">
-            <div className="bg-white dark:bg-black rounded-md overflow-hidden">
+            <div className="bg-white dark:bg-black overflow-hidden">
               <div className="p-4 border-b">
                 <div className="flex items-center">
                   <Avatar className="h-8 w-8 mr-3">
@@ -47,9 +47,9 @@ export default function PreviewModal({ isOpen, onClose, images, activeTab }: Pre
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-[2px]">
+              <div className="grid grid-cols-3 gap-0 border-separate border-spacing-0">
                 {images.map((image) => (
-                  <div key={image.id} className="relative aspect-[4/5]">
+                  <div key={image.id} className="relative aspect-[4/5] border border-background">
                     <Image src={image.src || "/placeholder.svg"} alt="Instagram post" fill className="object-cover" />
                   </div>
                 ))}
@@ -58,7 +58,7 @@ export default function PreviewModal({ isOpen, onClose, images, activeTab }: Pre
           </TabsContent>
 
           <TabsContent value="reels">
-            <div className="bg-white dark:bg-black rounded-md overflow-hidden">
+            <div className="bg-white dark:bg-black overflow-hidden">
               <div className="p-4 border-b">
                 <div className="flex items-center">
                   <Avatar className="h-8 w-8 mr-3">
@@ -69,9 +69,9 @@ export default function PreviewModal({ isOpen, onClose, images, activeTab }: Pre
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-[2px]">
+              <div className="grid grid-cols-3 gap-0 border-separate border-spacing-0">
                 {images.map((image) => (
-                  <div key={image.id} className="aspect-[16/9] relative">
+                  <div key={image.id} className="aspect-[16/9] relative border border-background">
                     <Image src={image.src || "/placeholder.svg"} alt="Instagram reel" fill className="object-cover" />
                   </div>
                 ))}
@@ -83,7 +83,7 @@ export default function PreviewModal({ isOpen, onClose, images, activeTab }: Pre
         <div className="mt-4">
           <h3 className="text-lg font-semibold mb-2">단일 포스트 미리보기</h3>
           {images.length > 0 && (
-            <div className="border rounded-md overflow-hidden">
+            <div className="border overflow-hidden">
               <div className="p-3 flex items-center justify-between">
                 <div className="flex items-center">
                   <Avatar className="h-8 w-8 mr-2">

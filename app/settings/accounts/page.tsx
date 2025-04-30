@@ -105,15 +105,13 @@ export default function AccountsSettingsPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
         <h1 className="text-2xl font-bold">Connected Accounts</h1>
-        <Button onClick={handleAddAccount} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          {connectedAccountsCount >= maxAccounts ? (
-            <span>Add account slot (₩9,900)</span>
-          ) : (
-            <span>Connect Account</span>
-          )}
+        <Button onClick={handleAddAccount} className="flex items-center gap-2 whitespace-normal sm:whitespace-nowrap">
+          <Plus className="h-4 w-4 flex-shrink-0" />
+          <span className="text-sm">
+            {connectedAccountsCount >= maxAccounts ? "Add account slot (₩9,900)" : "Connect Account"}
+          </span>
         </Button>
       </div>
 
@@ -136,10 +134,10 @@ export default function AccountsSettingsPage() {
             {connectedAccountsCount >= maxAccounts && (
               <Button
                 onClick={() => setIsPaymentDialogOpen(true)}
-                className="w-full mt-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                className="w-full mt-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-xs sm:text-sm px-2 sm:px-4"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Need more? Add another account slot for ₩9,900
+                <Plus className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+                <span className="text-wrap">Need more? Add another account slot for ₩9,900</span>
               </Button>
             )}
           </div>
@@ -158,7 +156,7 @@ export default function AccountsSettingsPage() {
                 <div key={account.id} className="flex items-center justify-between p-3 border rounded-md">
                   <div className="flex items-center gap-3">
                     <Avatar>
-                      <AvatarImage src={account.profileImage} alt={account.username} />
+                      <AvatarImage src={account.profileImage || "/placeholder.svg"} alt={account.username} />
                       <AvatarFallback>
                         <Instagram className="h-5 w-5" />
                       </AvatarFallback>
@@ -177,7 +175,7 @@ export default function AccountsSettingsPage() {
                     onClick={() => handleDisconnect(account.id)}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Disconnect
+                    <span className="hidden sm:inline">Disconnect</span>
                   </Button>
                 </div>
               ))}

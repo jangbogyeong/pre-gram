@@ -204,15 +204,15 @@ export default function InstagramAccountSelector({
       <div className="flex items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={currentAccount.profileImage} alt={currentAccount.username} />
+            <Button variant="outline" className="flex items-center gap-2 max-w-[200px]">
+              <Avatar className="h-6 w-6 flex-shrink-0">
+                <AvatarImage src={currentAccount.profileImage || "/placeholder.svg"} alt={currentAccount.username} />
                 <AvatarFallback>
                   <Instagram className="h-4 w-4" />
                 </AvatarFallback>
               </Avatar>
-              <span className="font-medium">@{currentAccount.username}</span>
-              <ChevronDown className="h-4 w-4 opacity-50" />
+              <span className="font-medium truncate">@{currentAccount.username}</span>
+              <ChevronDown className="h-4 w-4 opacity-50 flex-shrink-0 ml-auto" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
@@ -225,14 +225,14 @@ export default function InstagramAccountSelector({
               className="cursor-pointer bg-muted/50"
               onClick={() => handleAccountSelect(currentAccount)}
             >
-              <Avatar className="h-6 w-6 mr-2">
-                <AvatarImage src={currentAccount.profileImage} alt={currentAccount.username} />
+              <Avatar className="h-6 w-6 mr-2 flex-shrink-0">
+                <AvatarImage src={currentAccount.profileImage || "/placeholder.svg"} alt={currentAccount.username} />
                 <AvatarFallback>
                   <Instagram className="h-4 w-4" />
                 </AvatarFallback>
               </Avatar>
-              <span className="flex-1">@{currentAccount.username}</span>
-              <Check className="h-4 w-4 ml-2 text-primary" />
+              <span className="flex-1 truncate">@{currentAccount.username}</span>
+              <Check className="h-4 w-4 ml-2 text-primary flex-shrink-0" />
             </DropdownMenuItem>
 
             {/* 다른 계정들 표시 */}
@@ -240,19 +240,19 @@ export default function InstagramAccountSelector({
               .filter((account) => account.id !== currentAccount.id)
               .map((account) => (
                 <DropdownMenuItem key={account.id} className="cursor-pointer flex justify-between">
-                  <div className="flex items-center flex-1" onClick={() => handleAccountSelect(account)}>
-                    <Avatar className="h-6 w-6 mr-2">
-                      <AvatarImage src={account.profileImage} alt={account.username} />
+                  <div className="flex items-center flex-1 min-w-0" onClick={() => handleAccountSelect(account)}>
+                    <Avatar className="h-6 w-6 mr-2 flex-shrink-0">
+                      <AvatarImage src={account.profileImage || "/placeholder.svg"} alt={account.username} />
                       <AvatarFallback>
                         <Instagram className="h-4 w-4" />
                       </AvatarFallback>
                     </Avatar>
-                    <span>@{account.username}</span>
+                    <span className="truncate">@{account.username}</span>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 text-destructive hover:text-destructive"
+                    className="h-6 w-6 text-destructive hover:text-destructive flex-shrink-0"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDeleteAccount(account.id)
@@ -268,11 +268,11 @@ export default function InstagramAccountSelector({
               You can connect {connectedAccountsCount} of {maxAccounts} accounts
             </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer" onClick={handleAddAccount}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 mr-2 flex-shrink-0" />
               {connectedAccountsCount >= maxAccounts ? (
-                <span>Add another account slot (₩9,900)</span>
+                <span className="text-sm">Add another account slot (₩9,900)</span>
               ) : (
-                <span>Add Account</span>
+                <span className="text-sm">Add Account</span>
               )}
             </DropdownMenuItem>
           </DropdownMenuContent>

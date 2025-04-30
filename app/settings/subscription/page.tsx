@@ -57,7 +57,7 @@ export default function AccountSlotsPage() {
           <div className="space-y-6">
             <div className="flex items-center justify-between p-4 border rounded-md">
               <div className="flex items-center gap-3">
-                <div className="bg-primary/10 p-2 rounded-full">
+                <div className="bg-primary/10 p-2 rounded-full flex-shrink-0">
                   <Instagram className="h-6 w-6" />
                 </div>
                 <div>
@@ -72,7 +72,7 @@ export default function AccountSlotsPage() {
               Array.from({ length: maxAccounts - 1 }).map((_, index) => (
                 <div key={index} className="flex items-center justify-between p-4 border rounded-md">
                   <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 p-2 rounded-full">
+                    <div className="bg-primary/10 p-2 rounded-full flex-shrink-0">
                       <Instagram className="h-6 w-6" />
                     </div>
                     <div>
@@ -86,10 +86,10 @@ export default function AccountSlotsPage() {
 
             <Button
               onClick={() => setIsPaymentDialogOpen(true)}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-xs sm:text-sm px-2 sm:px-4"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Another Account Slot (₩9,900)
+              <Plus className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+              <span className="text-wrap">Add Another Account Slot (₩9,900)</span>
             </Button>
           </div>
 

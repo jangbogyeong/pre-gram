@@ -59,7 +59,7 @@ export default function FetchFeedPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col w-full max-w-full">
       <header className="p-4 flex justify-between items-center">
         <Button variant="ghost" size="icon" onClick={() => router.push("/connect-instagram")}>
           <ArrowLeft className="h-5 w-5" />
@@ -68,8 +68,8 @@ export default function FetchFeedPage() {
         <ModeToggle />
       </header>
 
-      <div className="flex-1 p-4 md:p-6">
-        <div className="max-w-3xl mx-auto">
+      <div className="flex-1 px-0 py-4 md:py-6 overflow-y-auto">
+        <div className="max-w-3xl mx-auto w-full px-4 md:px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -83,9 +83,12 @@ export default function FetchFeedPage() {
           </motion.div>
 
           {isLoading ? (
-            <div className="grid grid-cols-3 gap-2 md:gap-4">
+            <div className="grid grid-cols-3 gap-0 border-separate border-spacing-0">
               {Array.from({ length: 9 }).map((_, index) => (
-                <div key={index} className="aspect-[4/5] bg-muted/30 rounded-md overflow-hidden">
+                <div
+                  key={index}
+                  className="aspect-[4/5] bg-muted/30 rounded-none overflow-hidden border border-background"
+                >
                   <motion.div
                     className="w-full h-full bg-gradient-to-r from-muted/10 to-muted/30"
                     animate={{
@@ -107,14 +110,14 @@ export default function FetchFeedPage() {
             </div>
           ) : (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-              <div className="grid grid-cols-3 gap-2 md:gap-4">
+              <div className="grid grid-cols-3 gap-0 border-separate border-spacing-0">
                 {feedImages.map((image, index) => (
                   <motion.div
                     key={image.id}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.3, delay: index * 0.05 }}
-                    className="aspect-[4/5] bg-muted rounded-md overflow-hidden"
+                    className="aspect-[4/5] bg-muted rounded-none overflow-hidden border border-background"
                   >
                     <div className="relative w-full h-full">
                       <Image

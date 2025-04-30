@@ -1,32 +1,42 @@
-import Link from "next/link"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Compass, Heart, Home, PlusSquare } from "lucide-react"
+"use client"
+import { useRouter } from "next/navigation"
+import { Grid, Settings } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-export default function MobileNavigation() {
+interface MobileNavigationProps {
+  activeTab?: string
+  onTabChange?: (tab: string) => void
+}
+
+export default function MobileNavigation({ activeTab, onTabChange }: MobileNavigationProps) {
+  const router = useRouter()
+
+  const handleTabClick = (tab: string) => {
+    if (onTabChange) {
+      onTabChange(tab)
+    }
+  }
+
   return (
-    <div className="flex justify-around items-center py-3 px-2">
-      <Link href="#" className="flex flex-col items-center">
-        <Home className="h-6 w-6" />
-      </Link>
+    <div className="fixed bottom-0 left-0 right-0 bg-background border-t flex justify-around items-center py-3 px-2 z-50">
+      <button
+        onClick={() => handleTabClick("layouts")}
+        className={cn("flex flex-col items-center", activeTab === "layouts" ? "text-primary" : "text-muted-foreground")}
+      >
+        <Grid className="h-6 w-6" />
+        <span className="text-xs mt-1">레이아웃</span>
+      </button>
 
-      <Link href="#" className="flex flex-col items-center">
-        <Compass className="h-6 w-6" />
-      </Link>
-
-      <Link href="#" className="flex flex-col items-center">
-        <PlusSquare className="h-6 w-6" />
-      </Link>
-
-      <Link href="#" className="flex flex-col items-center">
-        <Heart className="h-6 w-6" />
-      </Link>
-
-      <Link href="#" className="flex flex-col items-center">
-        <Avatar className="h-6 w-6">
-          <AvatarImage src="/placeholder.svg?height=24&width=24" alt="Profile" />
-          <AvatarFallback>U</AvatarFallback>
-        </Avatar>
-      </Link>
+      <button
+        onClick={() => router.push("/settings/profile")}
+        className={cn(
+          "flex flex-col items-center",
+          activeTab === "settings" ? "text-primary" : "text-muted-foreground",
+        )}
+      >
+        <Settings className="h-6 w-6" />
+        <span className="text-xs mt-1">설정</span>
+      </button>
     </div>
   )
 }

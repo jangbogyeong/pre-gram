@@ -11,6 +11,7 @@ import type { ImageItem } from "@/contexts/project-context"
 import { v4 as uuidv4 } from "uuid"
 import { motion } from "framer-motion"
 import { useToast } from "@/hooks/use-toast"
+import { cn } from "@/lib/utils"
 
 interface LayoutCardProps {
   id: string
@@ -22,6 +23,8 @@ interface LayoutCardProps {
   onDuplicate: (layoutId: string) => void
   onDelete: (layoutId: string) => void
   onAddImages: (layoutId: string, images: ImageItem[]) => void
+  isMobile?: boolean
+  isActive?: boolean
 }
 
 export default function LayoutCard({
@@ -34,6 +37,8 @@ export default function LayoutCard({
   onDuplicate,
   onDelete,
   onAddImages,
+  isMobile = false,
+  isActive = false,
 }: LayoutCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDuplicating, setIsDuplicating] = useState(false)
@@ -48,7 +53,7 @@ export default function LayoutCard({
     setLocalImages(images)
   }, [id, images])
 
-  // 파일 선택 핸들러 - 완전히 새로 작성
+  // 파일 선택 핸들러 수정
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) {
       console.log("No files selected")
@@ -78,8 +83,27 @@ export default function LayoutCard({
 
       // 각 이미지 파일 처리
       for (const file of imageFiles) {
-        const imageData = await processImageFile(file)
-        processedImages.push(imageData)
+        try {
+          const imageData = await processImageFile(file)
+          processedImages.push(imageData)
+        } catch (imageError) {
+          console.error(`Error processing image ${file.name}:`, imageError)
+          // 개별 이미지 처리 실패 시 건너뛰고 계속 진행
+          toast({
+            title: `이미지 처리 실패: ${file.name}`,
+            description: "이 이미지는 건너뛰고 계속 진행합니다.",
+            variant: "destructive",
+          })
+        }
+      }
+
+      if (processedImages.length === 0) {
+        toast({
+          title: "이미지 처리 실패",
+          description: "선택한 이미지를 처리할 수 없습니다.",
+          variant: "destructive",
+        })
+        return
       }
 
       console.log(`Processed ${processedImages.length} images for layout ${id}`)
@@ -112,12 +136,19 @@ export default function LayoutCard({
     }
   }
 
-  // 이미지 파일 처리 함수
+  // 이미지 파일 처리 함수 수정 - 타임아웃 추가
   const processImageFile = (file: File): Promise<ImageItem> => {
     return new Promise((resolve, reject) => {
+      // 타임아웃 설정 (10초)
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`Processing timed out for file: ${file.name}`))
+      }, 10000)
+
       const reader = new FileReader()
 
       reader.onload = (event) => {
+        clearTimeout(timeoutId) // 타임아웃 취소
+
         if (!event.target || typeof event.target.result !== "string") {
           reject(new Error(`Failed to read file: ${file.name}`))
           return
@@ -127,7 +158,21 @@ export default function LayoutCard({
 
         // 이미지 크기 가져오기
         const img = new Image()
+
+        // 이미지 로드 타임아웃 설정 (5초)
+        const imgTimeoutId = setTimeout(() => {
+          reject(new Error(`Image loading timed out: ${file.name}`))
+        }, 5000)
+
         img.onload = () => {
+          clearTimeout(imgTimeoutId) // 타임아웃 취소
+
+          // 이미지 크기 제한 검사 (선택사항)
+          if (img.width > 5000 || img.height > 5000) {
+            reject(new Error(`Image too large: ${file.name} (${img.width}x${img.height})`))
+            return
+          }
+
           resolve({
             id: uuidv4(),
             src: dataUrl,
@@ -139,6 +184,7 @@ export default function LayoutCard({
         }
 
         img.onerror = () => {
+          clearTimeout(imgTimeoutId) // 타임아웃 취소
           reject(new Error(`Failed to load image: ${file.name}`))
         }
 
@@ -146,6 +192,7 @@ export default function LayoutCard({
       }
 
       reader.onerror = () => {
+        clearTimeout(timeoutId) // 타임아웃 취소
         reject(new Error(`Error reading file: ${file.name}`))
       }
 
@@ -203,56 +250,98 @@ export default function LayoutCard({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.3 }}
-      className="min-w-[300px] w-[300px] flex-shrink-0 snap-start"
+      className={cn(
+        isMobile ? "w-full flex-shrink-0 snap-center" : "min-w-[300px] w-[300px] flex-shrink-0 snap-start",
+        !isActive && isMobile ? "hidden" : "block",
+      )}
     >
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-sm font-medium">Layout {index + 1}</span>
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={handleAddImages}
-            title="Add Images"
-            disabled={isLoading}
-          >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`h-7 w-7 ${isDuplicating ? "animate-pulse" : ""}`}
-            onClick={handleDuplicate}
-            title="Duplicate Layout"
-            disabled={isDuplicating || isLoading}
-          >
-            <Copy className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`h-7 w-7 text-destructive hover:text-destructive ${isDeleting ? "animate-pulse" : ""}`}
-            onClick={handleDelete}
-            title="Delete Layout"
-            disabled={isDeleting || isLoading}
-          >
-            <Trash className="h-4 w-4" />
-          </Button>
+      {!isMobile && (
+        <div className="mb-2 flex items-center justify-between">
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handleAddImages}
+              title="Add Images"
+              disabled={isLoading}
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-7 w-7 ${isDuplicating ? "animate-pulse" : ""}`}
+              onClick={handleDuplicate}
+              title="Duplicate Layout"
+              disabled={isDuplicating || isLoading}
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-7 w-7 text-destructive hover:text-destructive ${isDeleting ? "animate-pulse" : ""}`}
+              onClick={handleDelete}
+              title="Delete Layout"
+              disabled={isDeleting || isLoading}
+            >
+              <Trash className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
       <motion.div
         animate={{
           scale: isDuplicating ? 0.95 : 1,
           opacity: isDeleting ? 0.5 : 1,
         }}
-        className="bg-white dark:bg-black rounded-lg overflow-hidden shadow-md"
+        className={cn("bg-white dark:bg-black overflow-hidden shadow-md", isMobile && "h-full flex flex-col")}
       >
-        <div className="p-3 border-b flex items-center">
-          <div className="w-7 h-7 rounded-full bg-muted mr-2"></div>
-          <span className="text-sm font-medium">your_username</span>
+        <div className="p-3 border-b flex flex-col">
+          <div className="text-sm font-medium mb-1">Board {index + 1}</div>
+          <div className="flex items-center">
+            <div className="w-7 h-7 rounded-full bg-muted mr-2"></div>
+            <span className="text-sm font-medium">your_username</span>
+
+            {isMobile && (
+              <div className="ml-auto flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={handleAddImages}
+                  title="Add Images"
+                  disabled={isLoading}
+                >
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`h-7 w-7 ${isDuplicating ? "animate-pulse" : ""}`}
+                  onClick={handleDuplicate}
+                  title="Duplicate Layout"
+                  disabled={isDuplicating || isLoading}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`h-7 w-7 text-destructive hover:text-destructive ${isDeleting ? "animate-pulse" : ""}`}
+                  onClick={handleDelete}
+                  title="Delete Layout"
+                  disabled={isDeleting || isLoading}
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className={cn("flex-1 overflow-hidden", isMobile && "flex-grow")}>
           {type === "feed" ? (
             <FeedGrid images={localImages} onReorder={handleReorder} onRemoveImage={handleRemoveImage} />
           ) : (

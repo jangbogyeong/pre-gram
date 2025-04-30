@@ -31,17 +31,18 @@ export default function ConnectInstagramPage() {
           transition={{ duration: 0.5 }}
           className="max-w-md w-full flex flex-col items-center"
         >
-          <div className="mb-8 relative w-24 h-24">
-            <Image src="/placeholder.svg?height=96&width=96" alt="Pre-gram Logo" fill className="object-contain" />
+          <div className="mb-8 relative w-48 h-16">
+            <Image
+              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/pregram%20logo-wDnlv8EUftA6IZFH1XLM7ePNSGWTC9.png"
+              alt="Pregram Logo"
+              fill
+              className="object-contain"
+            />
           </div>
 
-          <h1 className="text-2xl font-bold mb-4 text-center">
+          <h1 className="text-2xl font-bold mb-10 text-center">
             Which Instagram account would you like to preview your feed on?
           </h1>
-
-          <p className="text-muted-foreground mb-10 text-center">
-            To simulate your feed layout, please connect your Instagram account.
-          </p>
 
           <Button
             size="lg"

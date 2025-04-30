@@ -1,7 +1,6 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useProject } from "@/contexts/project-context"
@@ -15,6 +14,12 @@ import { useToast } from "@/hooks/use-toast"
 import UserProfileMenu from "@/components/user-profile-menu"
 import InstagramAccountSelector from "@/components/instagram-account-selector"
 import { generateDummyFeedImages, dummyInstagramAccounts } from "@/utils/dummy-data"
+import MobileNavigation from "@/components/mobile-navigation"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { useMediaQuery } from "@/hooks/use-media-query"
+import LayoutCard from "@/components/layout-card"
+import Image from "next/image"
 
 interface Layout {
   id: string
@@ -29,6 +34,14 @@ interface AccountLayouts {
 }
 
 export default function EditorPage() {
+  // 추가로 페이지 이동 시 메모리 누수 방지를 위한 수정
+
+  // 컴포넌트 최상단에 마운트 상태 추가
+  const isMountedRef = useRef(true)
+
+  const isMobile = useMediaQuery("(max-width: 768px)")
+  const [activeLayoutIndex, setActiveLayoutIndex] = useState(0)
+  const [activeTab, setActiveTab] = useState("layouts")
   const router = useRouter()
   const searchParams = useSearchParams()
   const { projects, currentProject, setCurrentProject, addImagesToProject, reorderImages, removeImage, createProject } =
@@ -52,6 +65,10 @@ export default function EditorPage() {
   const [feedbackMessage, setFeedbackMessage] = useState("")
   const [accountLayouts, setAccountLayouts] = useState<AccountLayouts>({})
   const [isLoading, setIsLoading] = useState(true) // 로딩 상태 추가
+  // 에러 처리 및 안전한 상태 관리를 위한 수정
+
+  // 1. 에러 상태 추가
+  const [error, setError] = useState<string | null>(null)
 
   // 현재 선택된 인스타그램 계정
   const [accounts, setAccounts] = useState(dummyInstagramAccounts)
@@ -59,38 +76,64 @@ export default function EditorPage() {
 
   // 피드백 메시지 표시 후 자동으로 사라지게 하는 함수
   const showFeedback = useCallback((message: string) => {
+    if (!isMountedRef.current) return // 컴포넌트가 언마운트되었으면 중단
+
     setFeedbackMessage(message)
-    setTimeout(() => setFeedbackMessage(""), 3000)
+    setTimeout(() => {
+      if (isMountedRef.current) {
+        // 타이머 완료 시에도 마운트 상태 확인
+        setFeedbackMessage("")
+      }
+    }, 3000)
   }, [])
 
   // 로컬 스토리지에서 계정별 레이아웃 데이터 불러오기 - 컴포넌트 마운트 시 한 번만 실행
   useEffect(() => {
-    console.log("EditorPage: Loading account layouts from localStorage")
-    setIsLoading(true)
+    const loadAccountLayouts = () => {
+      console.log("EditorPage: Loading account layouts from localStorage")
+      setIsLoading(true)
 
-    try {
-      const storedAccountLayouts = localStorage.getItem("pre-gram-account-layouts")
-      if (storedAccountLayouts) {
-        const parsedAccountLayouts = JSON.parse(storedAccountLayouts)
-        console.log("EditorPage: Loaded account layouts:", parsedAccountLayouts)
-        setAccountLayouts(parsedAccountLayouts)
-      } else {
-        console.log("EditorPage: No account layouts found in localStorage")
+      try {
+        const storedAccountLayouts = localStorage.getItem("pre-gram-account-layouts")
+        if (storedAccountLayouts) {
+          try {
+            const parsedAccountLayouts = JSON.parse(storedAccountLayouts)
+            console.log("EditorPage: Loaded account layouts:", parsedAccountLayouts)
+            setAccountLayouts(parsedAccountLayouts)
+          } catch (parseError) {
+            console.error("EditorPage: Failed to parse stored account layouts:", parseError)
+            // 파싱 실패 시 빈 객체로 초기화
+            setAccountLayouts({})
+            localStorage.removeItem("pre-gram-account-layouts")
+          }
+        } else {
+          console.log("EditorPage: No account layouts found in localStorage")
+        }
+      } catch (error) {
+        console.error("EditorPage: Error accessing localStorage:", error)
       }
-    } catch (error) {
-      console.error("EditorPage: Failed to parse stored account layouts:", error)
+
+      dataLoadedRef.current = true
+      setIsLoading(false)
     }
 
-    dataLoadedRef.current = true
-    setIsLoading(false)
-  }, [])
+    // Only load once on mount
+    if (!dataLoadedRef.current) {
+      loadAccountLayouts()
+    }
+  }, []) // Empty dependency array to ensure it only runs once on mount
 
   // 계정별 레이아웃 데이터 저장 - 디바운스 처리
   useEffect(() => {
+    // Only save if we have data and it's been loaded initially
     if (Object.keys(accountLayouts).length > 0 && dataLoadedRef.current) {
       console.log("EditorPage: Saving account layouts to localStorage:", accountLayouts)
       const saveTimeout = setTimeout(() => {
-        localStorage.setItem("pre-gram-account-layouts", JSON.stringify(accountLayouts))
+        try {
+          localStorage.setItem("pre-gram-account-layouts", JSON.stringify(accountLayouts))
+        } catch (error) {
+          console.error("EditorPage: Error saving account layouts:", error)
+        }
       }, 500) // 500ms 디바운스
 
       return () => clearTimeout(saveTimeout)
@@ -99,19 +142,41 @@ export default function EditorPage() {
 
   // 프로젝트 초기화 - 컴포넌트 마운트 시 한 번만 실행
   useEffect(() => {
-    if (projectId && !projectInitializedRef.current) {
-      console.log(`EditorPage: Initializing project with ID ${projectId}`)
-      const project = projects.find((p) => p.id === projectId)
-      if (project) {
-        console.log("EditorPage: Found project:", project)
-        setCurrentProject(project)
-        projectInitializedRef.current = true
-      } else {
-        console.log(`EditorPage: Project with ID ${projectId} not found, creating new project`)
-        // 프로젝트가 없으면 새로 생성 (type 파라미터 사용)
-        const newProject = createProject(type as "feed" | "reels")
-        router.replace(`/editor?type=${type}&id=${newProject.id}`)
+    const initializeProject = () => {
+      if (projectId && !projectInitializedRef.current) {
+        console.log(`EditorPage: Initializing project with ID ${projectId}`)
+        setIsLoading(true)
+
+        try {
+          const project = projects.find((p) => p.id === projectId)
+          if (project) {
+            console.log("EditorPage: Found project:", project)
+            setCurrentProject(project)
+            projectInitializedRef.current = true
+          } else {
+            console.log(`EditorPage: Project with ID ${projectId} not found, creating new project`)
+            // 프로젝트가 없으면 새로 생성 (type 파라미터 사용)
+            const newProject = createProject(type as "feed" | "reels")
+
+            // 새 프로젝트 ID로 URL 업데이트
+            if (newProject.id !== projectId) {
+              router.replace(`/editor?type=${type}&id=${newProject.id}`)
+              return // 라우터 변경 후 추가 로직 실행 방지
+            } else {
+              projectInitializedRef.current = true
+            }
+          }
+        } catch (err) {
+          console.error("Error initializing project:", err)
+          setError("프로젝트 초기화 중 오류가 발생했습니다.")
+        } finally {
+          setIsLoading(false)
+        }
       }
+    }
+
+    if (!projectInitializedRef.current) {
+      initializeProject()
     }
   }, [projectId, projects, setCurrentProject, createProject, router, type])
 
@@ -135,6 +200,8 @@ export default function EditorPage() {
 
   // 안전하게 레이아웃 업데이트하는 함수
   const safelyUpdateLayouts = useCallback((newLayouts: Layout[]) => {
+    if (!isMountedRef.current) return // 컴포넌트가 언마운트되었으면 상태 업데이트 중단
+
     if (isUpdatingLayoutsRef.current) {
       // 이미 업데이트 중이면 대기열에 추가
       console.log("EditorPage: Layout update already in progress, queueing update")
@@ -144,14 +211,20 @@ export default function EditorPage() {
 
     isUpdatingLayoutsRef.current = true
     console.log("EditorPage: Updating layouts:", newLayouts)
-    setLayouts(newLayouts)
+
+    // 마운트 상태 확인 후 상태 업데이트
+    if (isMountedRef.current) {
+      setLayouts(newLayouts)
+    }
 
     // 업데이트 완료 후 플래그 리셋
     setTimeout(() => {
+      if (!isMountedRef.current) return // 컴포넌트가 언마운트되었으면 중단
+
       isUpdatingLayoutsRef.current = false
 
       // 대기 중인 업데이트가 있으면 처리
-      if (pendingLayoutUpdateRef.current) {
+      if (pendingLayoutUpdateRef.current && isMountedRef.current) {
         console.log("EditorPage: Processing queued layout update")
         const pendingUpdate = pendingLayoutUpdateRef.current
         pendingLayoutUpdateRef.current = null
@@ -227,60 +300,101 @@ export default function EditorPage() {
 
   // 현재 계정이 변경될 때 해당 계정의 레이아웃 불러오기
   useEffect(() => {
+    const loadAccountLayouts = () => {
+      if (
+        !currentAccount?.id ||
+        !projectInitializedRef.current ||
+        accountSwitchingRef.current ||
+        !dataLoadedRef.current
+      ) {
+        return
+      }
+
+      console.log(`EditorPage: Loading layouts for account ${currentAccount.id}`)
+      setIsLoading(true)
+
+      try {
+        // 현재 계정의 레이아웃 데이터가 있는지 확인
+        const accountData = accountLayouts[currentAccount.id]
+
+        if (accountData && accountData.projectId && accountData.layouts) {
+          console.log("EditorPage: Found account data:", accountData)
+          // 해당 계정의 프로젝트 ID와 레이아웃 불러오기
+          const storedProjectId = accountData.projectId
+          const storedLayouts = accountData.layouts
+
+          // 프로젝트 ID가 변경되었으면 URL 업데이트
+          if (projectId !== storedProjectId) {
+            console.log(`EditorPage: Project ID mismatch, redirecting to stored project ID ${storedProjectId}`)
+            router.replace(`/editor?type=${type}&id=${storedProjectId}`)
+            return // 라우터 변경 후 추가 로직 실행 방지
+          }
+
+          // 프로젝트 설정
+          const project = projects.find((p) => p.id === storedProjectId)
+          if (project) {
+            console.log("EditorPage: Setting current project:", project)
+            setCurrentProject(project)
+          } else {
+            // 프로젝트를 찾지 못한 경우 새 프로젝트 생성
+            console.log(`EditorPage: Project with ID ${storedProjectId} not found, creating new project`)
+            const newProject = createProject(type as "feed" | "reels")
+
+            // 계정 레이아웃 데이터 업데이트
+            setAccountLayouts((prev) => ({
+              ...prev,
+              [currentAccount.id]: {
+                ...prev[currentAccount.id],
+                projectId: newProject.id,
+              },
+            }))
+
+            // 새 프로젝트 ID로 URL 업데이트
+            router.replace(`/editor?type=${type}&id=${newProject.id}`)
+            return // 라우터 변경 후 추가 로직 실행 방지
+          }
+
+          // 레이아웃 설정
+          if (storedLayouts && Array.isArray(storedLayouts) && storedLayouts.length > 0) {
+            console.log("EditorPage: Setting layouts from account data:", storedLayouts)
+            safelyUpdateLayouts(storedLayouts)
+            layoutsInitializedRef.current = true
+          } else {
+            console.log("EditorPage: No valid layouts found in account data, creating initial layout")
+            // 레이아웃이 없으면 초기 레이아웃 생성
+            createInitialLayout()
+          }
+        } else if (currentProject) {
+          console.log("EditorPage: No account data found, creating initial layout")
+          // 계정 데이터가 없으면 현재 프로젝트로 초기 레이아웃 생성
+          createInitialLayout()
+        } else {
+          // 현재 프로젝트가 없는 경우 새 프로젝트 생성
+          console.log("EditorPage: No current project, creating new project")
+          const newProject = createProject(type as "feed" | "reels")
+          router.replace(`/editor?type=${type}&id=${newProject.id}`)
+          return // 라우터 변경 후 추가 로직 실행 방지
+        }
+      } catch (error) {
+        console.error("Error loading layouts:", error)
+        setError("레이아웃을 불러오는 중 오류가 발생했습니다.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    // Add a check to prevent repeated calls
     if (
-      !currentAccount?.id ||
-      !projectInitializedRef.current ||
-      accountSwitchingRef.current ||
-      !dataLoadedRef.current
+      currentAccount?.id &&
+      !layoutsInitializedRef.current &&
+      projectInitializedRef.current &&
+      dataLoadedRef.current &&
+      !accountSwitchingRef.current
     ) {
-      return
+      loadAccountLayouts()
     }
-
-    console.log(`EditorPage: Loading layouts for account ${currentAccount.id}`)
-    setIsLoading(true)
-
-    // 현재 계정의 레이아웃 데이터가 있는지 확인
-    const accountData = accountLayouts[currentAccount.id]
-
-    if (accountData) {
-      console.log("EditorPage: Found account data:", accountData)
-      // 해당 계정의 프로젝트 ID와 레이아웃 불러오기
-      const storedProjectId = accountData.projectId
-      const storedLayouts = accountData.layouts
-
-      // 프로젝트 ID가 변경되었으면 URL 업데이트
-      if (projectId !== storedProjectId) {
-        console.log(`EditorPage: Project ID mismatch, redirecting to stored project ID ${storedProjectId}`)
-        router.replace(`/editor?type=${type}&id=${storedProjectId}`)
-        return // 라우터 변경 후 추가 로직 실행 방지
-      }
-
-      // 프로젝트 설정
-      const project = projects.find((p) => p.id === storedProjectId)
-      if (project) {
-        console.log("EditorPage: Setting current project:", project)
-        setCurrentProject(project)
-      }
-
-      // 레이아웃 설정
-      if (storedLayouts && storedLayouts.length > 0) {
-        console.log("EditorPage: Setting layouts from account data:", storedLayouts)
-        safelyUpdateLayouts(storedLayouts)
-        layoutsInitializedRef.current = true
-      } else {
-        console.log("EditorPage: No layouts found in account data, creating initial layout")
-        // 레이아웃이 없으면 초기 레이아웃 생성
-        createInitialLayout()
-      }
-    } else if (currentProject) {
-      console.log("EditorPage: No account data found, creating initial layout")
-      // 계정 데이터가 없으면 현재 프로젝트로 초기 레이아웃 생성
-      createInitialLayout()
-    }
-
-    setIsLoading(false)
   }, [
-    currentAccount,
+    currentAccount?.id,
     projectId,
     currentProject,
     projects,
@@ -290,15 +404,17 @@ export default function EditorPage() {
     safelyUpdateLayouts,
     createInitialLayout,
     type,
+    createProject,
   ])
 
   // 컴포넌트 마운트 시 더미 이미지 추가
   useEffect(() => {
     if (currentProject && !dummyImagesAddedRef.current && projectInitializedRef.current) {
       console.log("EditorPage: Adding dummy images on mount")
+      dummyImagesAddedRef.current = true
       addDummyImagesToProject()
     }
-  }, [currentProject, addDummyImagesToProject, projectInitializedRef])
+  }, [currentProject, addDummyImagesToProject, projectInitializedRef.current])
 
   // 레이아웃 변경 시 계정 레이아웃 데이터 저장 - 디바운스 처리
   useEffect(() => {
@@ -307,13 +423,20 @@ export default function EditorPage() {
       !layoutsInitializedRef.current ||
       !currentProject ||
       accountSwitchingRef.current ||
-      !dataLoadedRef.current
+      !dataLoadedRef.current ||
+      layouts.length === 0
     )
       return
 
     console.log(`EditorPage: Layouts changed, updating account layouts for account ${currentAccount.id}`)
     const saveTimeout = setTimeout(() => {
       setAccountLayouts((prev) => {
+        // Check if we're actually making a change to avoid unnecessary updates
+        const currentLayouts = prev[currentAccount.id]?.layouts || []
+        if (JSON.stringify(currentLayouts) === JSON.stringify(layouts)) {
+          return prev // No change needed
+        }
+
         const updatedAccountLayouts = {
           ...prev,
           [currentAccount.id]: {
@@ -327,7 +450,7 @@ export default function EditorPage() {
     }, 500) // 500ms 디바운스
 
     return () => clearTimeout(saveTimeout)
-  }, [layouts, currentAccount, currentProject])
+  }, [layouts, currentAccount?.id, currentProject])
 
   // 인스타그램 계정 변경 핸들러 - useCallback으로 메모이제이션
   const handleAccountChange = useCallback(
@@ -346,7 +469,7 @@ export default function EditorPage() {
           ...prev,
           [currentAccount.id]: {
             layouts: layouts,
-            projectId: currentProject.id,
+            projectId: currentProject?.id || "",
           },
         }))
       }
@@ -722,20 +845,81 @@ export default function EditorPage() {
 
   // 페이지 언마운트 시 데이터 저장
   useEffect(() => {
+    // 컴포넌트 마운트/언마운트 감지
+    isMountedRef.current = true
+
     return () => {
+      // 진행 중인 모든 작업 취소
+      isUpdatingLayoutsRef.current = false
+      pendingLayoutUpdateRef.current = null
+      accountSwitchingRef.current = false
+      isMountedRef.current = false
+
+      // 현재 상태 저장
       if (currentAccount?.id && currentProject && layouts.length > 0) {
-        console.log(`EditorPage: Saving layouts on unmount for account ${currentAccount.id}`)
-        const accountLayoutsData = {
-          ...JSON.parse(localStorage.getItem("pre-gram-account-layouts") || "{}"),
-          [currentAccount.id]: {
-            layouts: layouts,
-            projectId: currentProject.id,
-          },
+        try {
+          console.log(`EditorPage: Saving layouts on unmount for account ${currentAccount.id}`)
+          const accountLayoutsData = {
+            ...JSON.parse(localStorage.getItem("pre-gram-account-layouts") || "{}"),
+            [currentAccount.id]: {
+              layouts: layouts,
+              projectId: currentProject.id,
+            },
+          }
+          localStorage.setItem("pre-gram-account-layouts", JSON.stringify(accountLayoutsData))
+        } catch (error) {
+          console.error("Error saving layouts on unmount:", error)
         }
-        localStorage.setItem("pre-gram-account-layouts", JSON.stringify(accountLayoutsData))
       }
     }
   }, [currentAccount, currentProject, layouts])
+
+  // 모바일에서 다음/이전 레이아웃으로 이동하는 함수
+  const goToNextLayout = useCallback(() => {
+    if (layouts.length > 0) {
+      setActiveLayoutIndex((prev) => (prev === layouts.length - 1 ? 0 : prev + 1))
+    }
+  }, [layouts.length])
+
+  const goToPrevLayout = useCallback(() => {
+    if (layouts.length > 0) {
+      setActiveLayoutIndex((prev) => (prev === 0 ? layouts.length - 1 : prev - 1))
+    }
+  }, [layouts.length])
+
+  // 탭 변경 핸들러
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      setActiveTab(tab)
+
+      // 탭이 "layouts"일 때만 레이아웃 표시
+      if (tab === "layouts" && layouts.length === 0) {
+        createInitialLayout()
+      }
+
+      // 탭이 "settings"일 때는 설정 페이지로 이동
+      if (tab === "settings") {
+        router.push("/settings/profile")
+      }
+    },
+    [createInitialLayout, layouts.length, router],
+  )
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <div className="text-destructive mb-4">⚠️ {error}</div>
+        <Button
+          onClick={() => {
+            setError(null)
+            router.push("/select")
+          }}
+        >
+          돌아가기
+        </Button>
+      </div>
+    )
+  }
 
   if (!currentProject || isLoading) {
     return (
@@ -749,7 +933,14 @@ export default function EditorPage() {
     <div className="min-h-screen flex flex-col">
       <header className="p-4 flex justify-between items-center relative border-b">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-semibold hidden md:block">Pre-gram</h1>
+          <div className="relative w-32 h-8 hidden md:block">
+            <Image
+              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/pregram%20logo-wDnlv8EUftA6IZFH1XLM7ePNSGWTC9.png"
+              alt="Pregram Logo"
+              fill
+              className="object-contain"
+            />
+          </div>
           <InstagramAccountSelector
             accounts={accounts}
             currentAccount={currentAccount}
@@ -777,35 +968,122 @@ export default function EditorPage() {
         </div>
       </header>
 
-      <div className="flex-1 p-4 md:p-6">
+      <div className={cn("flex-1 p-4 md:p-6", isMobile && "pb-24")}>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
-          className="max-w-7xl mx-auto w-full"
+          className="max-w-7xl mx-auto w-full h-full"
         >
-          <div className="flex flex-col" ref={carouselRef}>
-            {layouts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-12 bg-muted/10 rounded-lg">
-                <p className="text-muted-foreground mb-4">No layouts found. Create a new layout to get started.</p>
-                <Button onClick={createInitialLayout} className="gap-2">
-                  Create New Layout
-                </Button>
+          {isMobile ? (
+            // 모바일 레이아웃
+            activeTab === "layouts" ? (
+              <div className="flex flex-col h-full">
+                {layouts.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-12 bg-muted/10 rounded-lg h-full">
+                    <p className="text-muted-foreground mb-4">No layouts found. Create a new layout to get started.</p>
+                    <Button onClick={createInitialLayout} className="gap-2">
+                      Create New Layout
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="relative h-full">
+                    {/* 모바일 레이아웃 슬라이더 */}
+                    {layouts.length > 1 && activeLayoutIndex > 0 && (
+                      <div className="absolute top-1/2 left-2 z-10 transform -translate-y-1/2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={goToPrevLayout}
+                          className="rounded-full bg-background/80 backdrop-blur-sm"
+                        >
+                          <ChevronLeft className="h-5 w-5" />
+                        </Button>
+                      </div>
+                    )}
+
+                    {layouts.length > 1 && activeLayoutIndex < layouts.length - 1 && (
+                      <div className="absolute top-1/2 right-2 z-10 transform -translate-y-1/2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={goToNextLayout}
+                          className="rounded-full bg-background/80 backdrop-blur-sm"
+                        >
+                          <ChevronRight className="h-5 w-5" />
+                        </Button>
+                      </div>
+                    )}
+
+                    <div className="h-full">
+                      {layouts.map((layout, index) => (
+                        <LayoutCard
+                          key={layout.id}
+                          id={layout.id}
+                          index={index}
+                          type={type as "feed" | "reels"}
+                          images={layout.images}
+                          onReorder={(layoutId, reorderedImages) => handleLayoutReorder(layoutId, reorderedImages)}
+                          onRemoveImage={(layoutId, imageId) => handleLayoutRemoveImage(layoutId, imageId)}
+                          onDuplicate={(layoutId) => handleDuplicateLayout(layoutId)}
+                          onDelete={(layoutId) => handleDeleteLayout(layoutId)}
+                          onAddImages={(layoutId, images) => handleAddImagesToLayout(layoutId, images)}
+                          isMobile={true}
+                          isActive={index === activeLayoutIndex}
+                        />
+                      ))}
+                    </div>
+
+                    {/* 페이지 인디케이터 */}
+                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1">
+                      {layouts.map((_, index) => (
+                        <button
+                          key={index}
+                          className={`w-2 h-2 rounded-full ${index === activeLayoutIndex ? "bg-primary" : "bg-muted"}`}
+                          onClick={() => setActiveLayoutIndex(index)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
-              <FeedCarousel
-                type={type as "feed" | "reels"}
-                layouts={layouts}
-                onReorder={handleLayoutReorder}
-                onRemoveImage={handleLayoutRemoveImage}
-                onDuplicateLayout={handleDuplicateLayout}
-                onDeleteLayout={handleDeleteLayout}
-                onAddImages={handleAddImagesToLayout}
-              />
-            )}
-          </div>
+              // 다른 탭 컨텐츠
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <h2 className="text-xl font-semibold mb-2">{activeTab} 탭</h2>
+                  <p className="text-muted-foreground">이 기능은 아직 개발 중입니다.</p>
+                </div>
+              </div>
+            )
+          ) : (
+            // 데스크톱 레이아웃
+            <div className="flex flex-col" ref={carouselRef}>
+              {layouts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-12 bg-muted/10 rounded-lg">
+                  <p className="text-muted-foreground mb-4">No layouts found. Create a new layout to get started.</p>
+                  <Button onClick={createInitialLayout} className="gap-2">
+                    Create New Layout
+                  </Button>
+                </div>
+              ) : (
+                <FeedCarousel
+                  type={type as "feed" | "reels"}
+                  layouts={layouts}
+                  onReorder={handleLayoutReorder}
+                  onRemoveImage={handleLayoutRemoveImage}
+                  onDuplicateLayout={handleDuplicateLayout}
+                  onDeleteLayout={handleDeleteLayout}
+                  onAddImages={handleAddImagesToLayout}
+                />
+              )}
+            </div>
+          )}
         </motion.div>
       </div>
+
+      {/* 모바일 네비게이션 */}
+      {isMobile && <MobileNavigation activeTab={activeTab} onTabChange={handleTabChange} />}
     </div>
   )
 }

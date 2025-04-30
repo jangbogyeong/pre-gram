@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { useSession, signOut } from "next-auth/react"
 
 interface User {
   id: string
@@ -27,99 +26,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const pathname = usePathname()
-  const { data: session, status } = useSession()
 
-  // NextAuth 세션에서 사용자 정보 불러오기
+  // 로컬 스토리지에서 사용자 정보 불러오기
   useEffect(() => {
-    if (status === "authenticated" && session?.user) {
-      // NextAuth 세션에서 사용자 정보 가져오기
-      const nextAuthUser = session.user
-
-      // 로컬 스토리지에서 추가 정보 가져오기
-      let storedUserData = null
-      if (typeof window !== "undefined") {
-        const storedUser = localStorage.getItem("pre-gram-user")
-        if (storedUser) {
-          try {
-            storedUserData = JSON.parse(storedUser)
-          } catch (e) {
-            console.error("Failed to parse stored user data:", e)
-          }
-        }
-      }
-
-      // 사용자 정보 병합
-      const mergedUser: User = {
-        id: nextAuthUser.id || nextAuthUser.email || "",
-        name: nextAuthUser.name || "User",
-        email: nextAuthUser.email || "",
-        provider: (storedUserData?.provider || "google") as "google" | "apple" | "facebook",
-        maxAccounts: storedUserData?.maxAccounts || 1,
-      }
-
-      setUser(mergedUser)
-
-      // 로컬 스토리지에 업데이트된 사용자 정보 저장
-      if (typeof window !== "undefined") {
-        localStorage.setItem("pre-gram-user", JSON.stringify(mergedUser))
-      }
-    } else if (status === "unauthenticated") {
-      setUser(null)
+    const storedUser = localStorage.getItem("pre-gram-user")
+    if (storedUser) {
+      setUser(JSON.parse(storedUser))
     }
-
-    setIsLoading(status === "loading")
-  }, [session, status])
+    setIsLoading(false)
+  }, [])
 
   // 로그인 가드 처리 수정
   useEffect(() => {
     if (!isLoading) {
-      const publicPaths = ["/login", "/connect-instagram"]
-      if (!user && !publicPaths.includes(pathname)) {
+      if (!user && pathname !== "/login" && pathname !== "/connect-instagram") {
         router.push("/login")
       }
     }
   }, [user, isLoading, pathname, router])
 
-  // 로그인 함수 수정 - NextAuth 사용
+  // 로그인 함수 수정
   const login = (provider: "google" | "apple" | "facebook") => {
-    console.log(`${provider} login clicked - using NextAuth`)
-    // 실제 로그인은 login 페이지에서 처리
+    console.log(`${provider} login clicked`)
+
+    // 실제 로그인 대신 가상의 사용자 정보 생성
+    const mockUser = {
+      id: `user-${Math.random().toString(36).substr(2, 9)}`,
+      name: `Test User (${provider})`,
+      email: `user-${Math.random().toString(36).substr(2, 9)}@example.com`,
+      provider,
+      maxAccounts: 1, // 기본값: 1개 계정 연결 가능
+    }
+
+    setUser(mockUser)
+    localStorage.setItem("pre-gram-user", JSON.stringify(mockUser))
+    router.push("/connect-instagram")
   }
 
   const logout = () => {
-    signOut({ redirect: false }).then(() => {
-      setUser(null)
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("pre-gram-user")
-      }
-      router.push("/login")
-    })
+    setUser(null)
+    localStorage.removeItem("pre-gram-user")
+    router.push("/login")
   }
 
   // 사용자 정보 업데이트 함수
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser)
-    if (typeof window !== "undefined") {
-      localStorage.setItem("pre-gram-user", JSON.stringify(updatedUser))
-    }
+    localStorage.setItem("pre-gram-user", JSON.stringify(updatedUser))
   }
-
-  // 개발 모드에서는 로그인 없이도 사용할 수 있도록 더미 사용자 생성
-  useEffect(() => {
-    if (process.env.NODE_ENV === "development" && status === "unauthenticated" && !user) {
-      const dummyUser: User = {
-        id: "dev-user",
-        name: "Development User",
-        email: "dev@example.com",
-        provider: "google",
-        maxAccounts: 2,
-      }
-      setUser(dummyUser)
-      if (typeof window !== "undefined") {
-        localStorage.setItem("pre-gram-user", JSON.stringify(dummyUser))
-      }
-    }
-  }, [status, user])
 
   return <AuthContext.Provider value={{ user, isLoading, login, logout, updateUser }}>{children}</AuthContext.Provider>
 }

@@ -68,7 +68,7 @@ const SortableImage = memo(function SortableImage({
           opacity: isRemoving ? 0 : 1,
         }}
         transition={{ duration: 0.2 }}
-        className="relative w-full h-full overflow-hidden bg-muted rounded-md aspect-[4/5]"
+        className="relative w-full h-full overflow-hidden bg-muted rounded-none aspect-[4/5] border border-background"
       >
         {imageError ? (
           <div className="w-full h-full flex items-center justify-center bg-muted">
@@ -115,7 +115,7 @@ const StaticImage = memo(function StaticImage({ image }: { image: ImageItem }) {
 
   return (
     <div className="relative">
-      <div className="relative w-full h-full overflow-hidden bg-muted rounded-md aspect-[4/5]">
+      <div className="relative w-full h-full overflow-hidden bg-muted rounded-none aspect-[4/5] border border-background">
         {imageError ? (
           <div className="w-full h-full flex items-center justify-center bg-muted">
             <ImageIcon className="h-8 w-8 text-muted-foreground opacity-50" />
@@ -221,8 +221,8 @@ function FeedGrid({ images, onReorder, onRemoveImage, readOnly = false }: FeedGr
   )
 
   return (
-    <div className="bg-background rounded-lg">
-      <div className="grid grid-cols-3 gap-1">
+    <div className="bg-background">
+      <div className="grid grid-cols-3 gap-0 border-separate border-spacing-0">
         {/* 사용자 업로드 이미지 - 드래그 가능 */}
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <SortableContext items={userUploadedImages.map((img) => img.id)} strategy={rectSortingStrategy}>

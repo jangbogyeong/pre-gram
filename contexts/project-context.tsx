@@ -71,20 +71,34 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }, [projects])
 
+  // 프로젝트 생성 함수 수정
   const createProject = useCallback(
     (type: "feed" | "reels", name?: string): Project => {
-      const newProject: Project = {
-        id: uuidv4(),
-        name: name || `${type === "feed" ? "Feed" : "Reels"} Project ${projects.length + 1}`,
-        type,
-        images: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
+      try {
+        const newProject: Project = {
+          id: uuidv4(),
+          name: name || `${type === "feed" ? "Feed" : "Reels"} Project ${projects.length + 1}`,
+          type,
+          images: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
 
-      setProjects((prev) => [...prev, newProject])
-      setCurrentProject(newProject)
-      return newProject
+        setProjects((prev) => [...prev, newProject])
+        setCurrentProject(newProject)
+        return newProject
+      } catch (error) {
+        console.error("Error creating project:", error)
+        // 에러가 발생해도 최소한의 프로젝트 객체 반환
+        return {
+          id: uuidv4(),
+          name: `Emergency Project`,
+          type: type,
+          images: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+      }
     },
     [projects.length],
   )
@@ -124,7 +138,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     [projects],
   )
 
-  // 완전히 재작성된 addImagesToProject 함수
+  // addImagesToProject 함수 수정
   const addImagesToProject = useCallback(
     (projectId: string, newImages: ImageItem[]) => {
       if (!newImages || newImages.length === 0) {
@@ -150,40 +164,53 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
       console.log(`ProjectContext: ${validImages.length} valid images to add`)
 
-      // 프로젝트 목록 업데이트
-      setProjects((prevProjects) => {
-        // 먼저 대상 프로젝트를 찾습니다
-        const targetProject = prevProjects.find((p) => p.id === projectId)
-        if (!targetProject) {
-          console.error(`ProjectContext: Project with id ${projectId} not found`)
-          return prevProjects
-        }
-
-        // 새 이미지를 기존 이미지 배열에 추가
-        const updatedImages = [...validImages, ...targetProject.images]
-        console.log(`ProjectContext: Project ${projectId} now has ${updatedImages.length} images`)
-
-        // 업데이트된 프로젝트 목록 반환
-        return prevProjects.map((project) =>
-          project.id === projectId ? { ...project, images: updatedImages, updatedAt: new Date() } : project,
-        )
-      })
-
-      // 현재 프로젝트가 업데이트 대상이면 현재 프로젝트도 업데이트
-      if (currentProject?.id === projectId) {
-        setCurrentProject((prevProject) => {
-          if (!prevProject) return null
+      try {
+        // 프로젝트 목록 업데이트
+        setProjects((prevProjects) => {
+          // 먼저 대상 프로젝트를 찾습니다
+          const targetProject = prevProjects.find((p) => p.id === projectId)
+          if (!targetProject) {
+            console.error(`ProjectContext: Project with id ${projectId} not found. Creating a new project instead.`)
+            // 프로젝트가 없으면 새 프로젝트 생성
+            const newProject: Project = {
+              id: projectId,
+              name: `New Project ${prevProjects.length + 1}`,
+              type: "feed",
+              images: validImages,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            }
+            return [...prevProjects, newProject]
+          }
 
           // 새 이미지를 기존 이미지 배열에 추가
-          const updatedImages = [...validImages, ...prevProject.images]
-          console.log(`ProjectContext: Current project now has ${updatedImages.length} images`)
+          const updatedImages = [...validImages, ...targetProject.images]
+          console.log(`ProjectContext: Project ${projectId} now has ${updatedImages.length} images`)
 
-          return {
-            ...prevProject,
-            images: updatedImages,
-            updatedAt: new Date(),
-          }
+          // 업데이트된 프로젝트 목록 반환
+          return prevProjects.map((project) =>
+            project.id === projectId ? { ...project, images: updatedImages, updatedAt: new Date() } : project,
+          )
         })
+
+        // 현재 프로젝트가 업데이트 대상이면 현재 프로젝트도 업데이트
+        if (currentProject?.id === projectId) {
+          setCurrentProject((prevProject) => {
+            if (!prevProject) return null
+
+            // 새 이미지를 기존 이미지 배열에 추가
+            const updatedImages = [...validImages, ...prevProject.images]
+            console.log(`ProjectContext: Current project now has ${updatedImages.length} images`)
+
+            return {
+              ...prevProject,
+              images: updatedImages,
+              updatedAt: new Date(),
+            }
+          })
+        }
+      } catch (error) {
+        console.error("ProjectContext: Error adding images to project:", error)
       }
     },
     [currentProject],

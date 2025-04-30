@@ -6,7 +6,6 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { Toaster } from "@/components/ui/toaster"
-import { SessionProvider } from "@/components/session-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -22,17 +21,15 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+    <html lang="en" suppressHydrationWarning className="overflow-x-hidden">
+      <body className={`${inter.className} overflow-x-hidden`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <SessionProvider>
-            <AuthProvider>
-              <ProjectProvider>
-                {children}
-                <Toaster />
-              </ProjectProvider>
-            </AuthProvider>
-          </SessionProvider>
+          <AuthProvider>
+            <ProjectProvider>
+              <div className="w-full max-w-full overflow-x-hidden">{children}</div>
+              <Toaster />
+            </ProjectProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
