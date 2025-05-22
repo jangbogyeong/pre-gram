@@ -3,14 +3,27 @@
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function InstagramCallbackPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
+  const { user } = useAuth()
   const [isProcessing, setIsProcessing] = useState(true)
 
   useEffect(() => {
+    // Check if user is authenticated
+    if (!user) {
+      toast({
+        title: "인증 필요",
+        description: "로그인이 필요합니다.",
+        variant: "destructive",
+      })
+      router.push("/login")
+      return
+    }
+
     const code = searchParams.get("code")
 
     if (!code) {
@@ -38,7 +51,7 @@ export default function InstagramCallbackPage() {
       setIsProcessing(false)
       router.push("/fetch-feed")
     }, 2000)
-  }, [searchParams, router, toast])
+  }, [searchParams, router, toast, user])
 
   return (
     <div className="min-h-screen flex items-center justify-center">

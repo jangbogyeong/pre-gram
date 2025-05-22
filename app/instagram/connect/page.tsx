@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
+import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Instagram, Lock } from "lucide-react"
@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast"
 
 export default function InstagramConnectPage() {
   const router = useRouter()
-  const { data: session, status } = useSession()
+  const { user } = useAuth()
   const [isConnected, setIsConnected] = useState(false)
   const [instagramUsername, setInstagramUsername] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -19,8 +19,9 @@ export default function InstagramConnectPage() {
 
   useEffect(() => {
     // 로그인 상태 확인
-    if (status === "unauthenticated") {
+    if (!user) {
       router.push("/login")
+      return
     }
 
     // 인스타그램 연동 상태 확인 (실제로는 API 호출)
@@ -30,7 +31,7 @@ export default function InstagramConnectPage() {
 
     setIsConnected(connected)
     setInstagramUsername(username)
-  }, [status, router])
+  }, [user, router])
 
   const handleConnectInstagram = () => {
     setIsLoading(true)
@@ -82,7 +83,7 @@ export default function InstagramConnectPage() {
   }
 
   // 로딩 중이거나 인증되지 않은 상태면 로딩 표시
-  if (status === "loading") {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
