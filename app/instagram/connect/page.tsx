@@ -2,42 +2,43 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Instagram, Lock } from "lucide-react"
 import { motion } from "framer-motion"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/contexts/auth-context"
 
 export default function InstagramConnectPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { data: session, status } = useSession()
   const [isConnected, setIsConnected] = useState(false)
   const [instagramUsername, setInstagramUsername] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
-    // Check if user is logged in
-    if (!user) {
+    // 로그인 상태 확인
+    if (status === "unauthenticated") {
       router.push("/login")
-      return
     }
 
-    // Check Instagram connection status (using localStorage as an example)
+    // 인스타그램 연동 상태 확인 (실제로는 API 호출)
+    // 여기서는 예시로 localStorage 사용
     const connected = localStorage.getItem("instagram-connected") === "true"
     const username = localStorage.getItem("instagram-username") || ""
 
     setIsConnected(connected)
     setInstagramUsername(username)
-  }, [user, router])
+  }, [status, router])
 
   const handleConnectInstagram = () => {
     setIsLoading(true)
 
-    // Simulate Instagram OAuth process
+    // 실제 구현에서는 Instagram OAuth 프로세스 시작
+    // 여기서는 예시로 setTimeout 사용
     setTimeout(() => {
-      // Simulate successful connection
+      // 연동 성공 시뮬레이션
       localStorage.setItem("instagram-connected", "true")
       localStorage.setItem("instagram-username", "example_user")
 
@@ -55,7 +56,8 @@ export default function InstagramConnectPage() {
   const handleDisconnectInstagram = () => {
     setIsLoading(true)
 
-    // Simulate API call to disconnect
+    // 실제 구현에서는 API 호출로 연동 해제
+    // 여기서는 예시로 setTimeout 사용
     setTimeout(() => {
       localStorage.removeItem("instagram-connected")
       localStorage.removeItem("instagram-username")
@@ -79,8 +81,8 @@ export default function InstagramConnectPage() {
     })
   }
 
-  // Show loading state while checking authentication
-  if (isLoading) {
+  // 로딩 중이거나 인증되지 않은 상태면 로딩 표시
+  if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -95,7 +97,7 @@ export default function InstagramConnectPage() {
           <ArrowLeft className="h-6 w-6" />
         </Button>
         <h1 className="text-xl font-semibold">인스타그램 계정 연동</h1>
-        <div className="w-10"></div> {/* Empty space for header balance */}
+        <div className="w-10"></div> {/* 헤더 균형을 위한 빈 공간 */}
       </header>
 
       <main className="flex-1 p-4 md:p-6">

@@ -23,9 +23,10 @@ export default function InstagramCallbackPage() {
       return
     }
 
-    // Simulate API call to exchange code for token
+    // 실제 구현에서는 여기서 API 호출로 코드를 서버에 전송하고 토큰 교환
+    // 여기서는 예시로 setTimeout 사용
     setTimeout(() => {
-      // Simulate successful connection
+      // 연동 성공 시뮬레이션
       localStorage.setItem("instagram-connected", "true")
       localStorage.setItem("instagram-username", "example_user")
 

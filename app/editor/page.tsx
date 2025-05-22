@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import LayoutCard from "@/components/layout-card"
 import Image from "next/image"
+import { isEqual } from "lodash"
 
 interface Layout {
   id: string
@@ -53,9 +54,13 @@ export default function EditorPage() {
   const layoutsInitializedRef = useRef(false)
   const accountSwitchingRef = useRef(false)
   const isUpdatingLayoutsRef = useRef(false)
+  const isUpdatingAccountLayoutsRef = useRef(false)
   const pendingLayoutUpdateRef = useRef<Layout[] | null>(null)
   const dataLoadedRef = useRef(false) // 데이터 로드 여부를 추적하는 새 ref
   const dummyImagesAddedRef = useRef(false) // 더미 이미지 추가 여부를 추적하는 새 ref
+  const prevLayoutsRef = useRef<Layout[]>([])
+  const prevAccountLayoutsRef = useRef<AccountLayouts>({})
+  const initialLayoutCreatedRef = useRef(false)
 
   const projectId = searchParams.get("id")
   const type = searchParams.get("type") || "feed"
@@ -74,6 +79,16 @@ export default function EditorPage() {
   const [accounts, setAccounts] = useState(dummyInstagramAccounts)
   const [currentAccount, setCurrentAccount] = useState(dummyInstagramAccounts[0])
 
+  const handleError = useCallback((error: any, message: string) => {
+    console.error(message, error)
+    setError(message)
+    setIsLoading(false)
+    // Reset any in-progress flags to prevent stuck states
+    accountSwitchingRef.current = false
+    isUpdatingLayoutsRef.current = false
+    isUpdatingAccountLayoutsRef.current = false
+  }, [])
+
   // 피드백 메시지 표시 후 자동으로 사라지게 하는 함수
   const showFeedback = useCallback((message: string) => {
     if (!isMountedRef.current) return // 컴포넌트가 언마운트되었으면 중단
@@ -90,6 +105,8 @@ export default function EditorPage() {
   // 로컬 스토리지에서 계정별 레이아웃 데이터 불러오기 - 컴포넌트 마운트 시 한 번만 실행
   useEffect(() => {
     const loadAccountLayouts = () => {
+      if (dataLoadedRef.current) return // Prevent multiple loads
+
       console.log("EditorPage: Loading account layouts from localStorage")
       setIsLoading(true)
 
@@ -100,6 +117,7 @@ export default function EditorPage() {
             const parsedAccountLayouts = JSON.parse(storedAccountLayouts)
             console.log("EditorPage: Loaded account layouts:", parsedAccountLayouts)
             setAccountLayouts(parsedAccountLayouts)
+            prevAccountLayoutsRef.current = parsedAccountLayouts
           } catch (parseError) {
             console.error("EditorPage: Failed to parse stored account layouts:", parseError)
             // 파싱 실패 시 빈 객체로 초기화
@@ -118,26 +136,42 @@ export default function EditorPage() {
     }
 
     // Only load once on mount
-    if (!dataLoadedRef.current) {
-      loadAccountLayouts()
+    loadAccountLayouts()
+
+    // Cleanup function
+    return () => {
+      // No cleanup needed for this effect
     }
   }, []) // Empty dependency array to ensure it only runs once on mount
 
   // 계정별 레이아웃 데이터 저장 - 디바운스 처리
   useEffect(() => {
     // Only save if we have data and it's been loaded initially
-    if (Object.keys(accountLayouts).length > 0 && dataLoadedRef.current) {
-      console.log("EditorPage: Saving account layouts to localStorage:", accountLayouts)
-      const saveTimeout = setTimeout(() => {
-        try {
-          localStorage.setItem("pre-gram-account-layouts", JSON.stringify(accountLayouts))
-        } catch (error) {
-          console.error("EditorPage: Error saving account layouts:", error)
-        }
-      }, 500) // 500ms 디바운스
-
-      return () => clearTimeout(saveTimeout)
+    if (
+      Object.keys(accountLayouts).length === 0 ||
+      !dataLoadedRef.current ||
+      isUpdatingLayoutsRef.current ||
+      isUpdatingAccountLayoutsRef.current
+    ) {
+      return
     }
+
+    // Deep comparison to prevent unnecessary updates
+    if (isEqual(prevAccountLayoutsRef.current, accountLayouts)) {
+      return
+    }
+
+    console.log("EditorPage: Saving account layouts to localStorage:", accountLayouts)
+    const saveTimeout = setTimeout(() => {
+      try {
+        localStorage.setItem("pre-gram-account-layouts", JSON.stringify(accountLayouts))
+        prevAccountLayoutsRef.current = JSON.parse(JSON.stringify(accountLayouts))
+      } catch (error) {
+        console.error("EditorPage: Error saving account layouts:", error)
+      }
+    }, 500) // 500ms 디바운스
+
+    return () => clearTimeout(saveTimeout)
   }, [accountLayouts])
 
   // 프로젝트 초기화 - 컴포넌트 마운트 시 한 번만 실행
@@ -178,22 +212,27 @@ export default function EditorPage() {
     if (!projectInitializedRef.current) {
       initializeProject()
     }
+
+    // Cleanup function
+    return () => {
+      // No cleanup needed for this effect
+    }
   }, [projectId, projects, setCurrentProject, createProject, router, type])
 
   // 더미 이미지 추가 함수
   const addDummyImagesToProject = useCallback(() => {
-    if (!currentProject || dummyImagesAddedRef.current) return
+    if (!currentProject || dummyImagesAddedRef.current) return null
 
     console.log("EditorPage: Adding dummy images to project")
+
+    // Set the flag BEFORE generating images to prevent multiple calls
+    dummyImagesAddedRef.current = true
 
     // 더미 이미지 생성
     const dummyImages = generateDummyFeedImages(9)
 
     // 프로젝트에 더미 이미지 추가
     addImagesToProject(currentProject.id, dummyImages)
-
-    // 더미 이미지 추가 완료 표시
-    dummyImagesAddedRef.current = true
 
     return dummyImages
   }, [currentProject, addImagesToProject])
@@ -209,12 +248,19 @@ export default function EditorPage() {
       return
     }
 
+    // Deep comparison to prevent unnecessary updates
+    if (isEqual(prevLayoutsRef.current, newLayouts)) {
+      console.log("EditorPage: Layouts unchanged, skipping update")
+      return
+    }
+
     isUpdatingLayoutsRef.current = true
     console.log("EditorPage: Updating layouts:", newLayouts)
 
     // 마운트 상태 확인 후 상태 업데이트
     if (isMountedRef.current) {
       setLayouts(newLayouts)
+      prevLayoutsRef.current = JSON.parse(JSON.stringify(newLayouts))
     }
 
     // 업데이트 완료 후 플래그 리셋
@@ -235,7 +281,13 @@ export default function EditorPage() {
 
   // 초기 레이아웃 생성 함수
   const createInitialLayout = useCallback(() => {
-    if (!currentProject) return
+    if (!currentProject || initialLayoutCreatedRef.current) return
+
+    console.log("EditorPage: Creating initial layout")
+
+    // Set the flag immediately to prevent multiple calls
+    initialLayoutCreatedRef.current = true
+    layoutsInitializedRef.current = true
 
     // 더미 이미지 추가
     const dummyImages = addDummyImagesToProject() || []
@@ -261,18 +313,34 @@ export default function EditorPage() {
       }
 
       safelyUpdateLayouts([initialLayout])
-      layoutsInitializedRef.current = true
 
-      // 계정 레이아웃 데이터 저장
+      // 계정 레이아웃 데이터 저장 - 별도의 함수로 분리하여 상태 업데이트 분리
       if (currentAccount?.id && currentProject) {
         console.log(`EditorPage: Saving initial layout for account ${currentAccount.id}`)
-        setAccountLayouts((prev) => ({
-          ...prev,
-          [currentAccount.id]: {
-            layouts: [initialLayout],
-            projectId: currentProject.id,
-          },
-        }))
+
+        // Set flag to prevent circular updates
+        isUpdatingAccountLayoutsRef.current = true
+
+        setTimeout(() => {
+          if (!isMountedRef.current) return
+
+          setAccountLayouts((prev) => {
+            const newAccountLayouts = {
+              ...prev,
+              [currentAccount.id]: {
+                layouts: [initialLayout],
+                projectId: currentProject.id,
+              },
+            }
+
+            // Reset flag after update
+            setTimeout(() => {
+              isUpdatingAccountLayoutsRef.current = false
+            }, 0)
+
+            return newAccountLayouts
+          })
+        }, 0)
       }
     } else {
       console.log("EditorPage: Creating empty initial layout")
@@ -282,21 +350,37 @@ export default function EditorPage() {
         images: [],
       }
       safelyUpdateLayouts([emptyLayout])
-      layoutsInitializedRef.current = true
 
       // 계정 레이아웃 데이터 저장
       if (currentAccount?.id && currentProject) {
         console.log(`EditorPage: Saving empty initial layout for account ${currentAccount.id}`)
-        setAccountLayouts((prev) => ({
-          ...prev,
-          [currentAccount.id]: {
-            layouts: [emptyLayout],
-            projectId: currentProject.id,
-          },
-        }))
+
+        // Set flag to prevent circular updates
+        isUpdatingAccountLayoutsRef.current = true
+
+        setTimeout(() => {
+          if (!isMountedRef.current) return
+
+          setAccountLayouts((prev) => {
+            const newAccountLayouts = {
+              ...prev,
+              [currentAccount.id]: {
+                layouts: [emptyLayout],
+                projectId: currentProject.id,
+              },
+            }
+
+            // Reset flag after update
+            setTimeout(() => {
+              isUpdatingAccountLayoutsRef.current = false
+            }, 0)
+
+            return newAccountLayouts
+          })
+        }, 0)
       }
     }
-  }, [currentProject, currentAccount, safelyUpdateLayouts, setAccountLayouts, addDummyImagesToProject])
+  }, [currentProject, currentAccount, safelyUpdateLayouts, addDummyImagesToProject])
 
   // 현재 계정이 변경될 때 해당 계정의 레이아웃 불러오기
   useEffect(() => {
@@ -305,7 +389,10 @@ export default function EditorPage() {
         !currentAccount?.id ||
         !projectInitializedRef.current ||
         accountSwitchingRef.current ||
-        !dataLoadedRef.current
+        !dataLoadedRef.current ||
+        layoutsInitializedRef.current || // Add this check to prevent reloading if already initialized
+        isUpdatingAccountLayoutsRef.current || // Add this check to prevent circular updates
+        isUpdatingLayoutsRef.current // Add this check to prevent circular updates
       ) {
         return
       }
@@ -314,10 +401,13 @@ export default function EditorPage() {
       setIsLoading(true)
 
       try {
+        // Set the flag to prevent circular updates
+        layoutsInitializedRef.current = true
+
         // 현재 계정의 레이아웃 데이터가 있는지 확인
         const accountData = accountLayouts[currentAccount.id]
 
-        if (accountData && accountData.projectId && accountData.layouts) {
+        if (accountData && accountData.projectId && accountData.layouts && accountData.layouts.length > 0) {
           console.log("EditorPage: Found account data:", accountData)
           // 해당 계정의 프로젝트 ID와 레이아웃 불러오기
           const storedProjectId = accountData.projectId
@@ -341,13 +431,23 @@ export default function EditorPage() {
             const newProject = createProject(type as "feed" | "reels")
 
             // 계정 레이아웃 데이터 업데이트
-            setAccountLayouts((prev) => ({
-              ...prev,
-              [currentAccount.id]: {
-                ...prev[currentAccount.id],
-                projectId: newProject.id,
-              },
-            }))
+            isUpdatingAccountLayoutsRef.current = true
+            setAccountLayouts((prev) => {
+              const newAccountLayouts = {
+                ...prev,
+                [currentAccount.id]: {
+                  ...prev[currentAccount.id],
+                  projectId: newProject.id,
+                },
+              }
+
+              // Reset flag after update
+              setTimeout(() => {
+                isUpdatingAccountLayoutsRef.current = false
+              }, 0)
+
+              return newAccountLayouts
+            })
 
             // 새 프로젝트 ID로 URL 업데이트
             router.replace(`/editor?type=${type}&id=${newProject.id}`)
@@ -358,7 +458,7 @@ export default function EditorPage() {
           if (storedLayouts && Array.isArray(storedLayouts) && storedLayouts.length > 0) {
             console.log("EditorPage: Setting layouts from account data:", storedLayouts)
             safelyUpdateLayouts(storedLayouts)
-            layoutsInitializedRef.current = true
+            initialLayoutCreatedRef.current = true
           } else {
             console.log("EditorPage: No valid layouts found in account data, creating initial layout")
             // 레이아웃이 없으면 초기 레이아웃 생성
@@ -376,8 +476,10 @@ export default function EditorPage() {
           return // 라우터 변경 후 추가 로직 실행 방지
         }
       } catch (error) {
-        console.error("Error loading layouts:", error)
-        setError("레이아웃을 불러오는 중 오류가 발생했습니다.")
+        handleError(error, "레이아웃을 불러오는 중 오류가 발생했습니다.")
+        // Reset flags on error
+        layoutsInitializedRef.current = false
+        initialLayoutCreatedRef.current = false
       } finally {
         setIsLoading(false)
       }
@@ -389,7 +491,9 @@ export default function EditorPage() {
       !layoutsInitializedRef.current &&
       projectInitializedRef.current &&
       dataLoadedRef.current &&
-      !accountSwitchingRef.current
+      !accountSwitchingRef.current &&
+      !isUpdatingAccountLayoutsRef.current &&
+      !isUpdatingLayoutsRef.current
     ) {
       loadAccountLayouts()
     }
@@ -405,6 +509,7 @@ export default function EditorPage() {
     createInitialLayout,
     type,
     createProject,
+    handleError,
   ])
 
   // 컴포넌트 마운트 시 더미 이미지 추가
@@ -413,6 +518,11 @@ export default function EditorPage() {
       console.log("EditorPage: Adding dummy images on mount")
       dummyImagesAddedRef.current = true
       addDummyImagesToProject()
+    }
+
+    // Cleanup function
+    return () => {
+      // No cleanup needed for this effect
     }
   }, [currentProject, addDummyImagesToProject, projectInitializedRef.current])
 
@@ -424,19 +534,24 @@ export default function EditorPage() {
       !currentProject ||
       accountSwitchingRef.current ||
       !dataLoadedRef.current ||
-      layouts.length === 0
+      layouts.length === 0 ||
+      isUpdatingAccountLayoutsRef.current || // Add this check
+      isUpdatingLayoutsRef.current // Add this check
     )
       return
 
+    // Deep comparison to prevent unnecessary updates
+    const currentAccountData = accountLayouts[currentAccount.id] || { layouts: [], projectId: "" }
+    if (isEqual(currentAccountData.layouts, layouts)) {
+      return
+    }
+
     console.log(`EditorPage: Layouts changed, updating account layouts for account ${currentAccount.id}`)
     const saveTimeout = setTimeout(() => {
-      setAccountLayouts((prev) => {
-        // Check if we're actually making a change to avoid unnecessary updates
-        const currentLayouts = prev[currentAccount.id]?.layouts || []
-        if (JSON.stringify(currentLayouts) === JSON.stringify(layouts)) {
-          return prev // No change needed
-        }
+      // Set the flag before updating
+      isUpdatingAccountLayoutsRef.current = true
 
+      setAccountLayouts((prev) => {
         const updatedAccountLayouts = {
           ...prev,
           [currentAccount.id]: {
@@ -445,33 +560,58 @@ export default function EditorPage() {
           },
         }
         console.log("EditorPage: Updated account layouts:", updatedAccountLayouts)
+
+        // Reset the flag after a short delay to allow the update to complete
+        setTimeout(() => {
+          isUpdatingAccountLayoutsRef.current = false
+        }, 0)
+
         return updatedAccountLayouts
       })
     }, 500) // 500ms 디바운스
 
     return () => clearTimeout(saveTimeout)
-  }, [layouts, currentAccount?.id, currentProject])
+  }, [layouts, currentAccount?.id, currentProject, accountLayouts])
 
   // 인스타그램 계정 변경 핸들러 - useCallback으로 메모이제이션
   const handleAccountChange = useCallback(
     (account: any) => {
+      if (account.id === currentAccount?.id) return // Don't switch to the same account
+
       console.log(`EditorPage: Switching to account ${account.id}`)
       // 계정 전환 중임을 표시
       accountSwitchingRef.current = true
       layoutsInitializedRef.current = false
+      initialLayoutCreatedRef.current = false
       dummyImagesAddedRef.current = false
       setIsLoading(true)
 
       // 현재 레이아웃 데이터 저장
-      if (currentAccount?.id && currentProject) {
+      if (currentAccount?.id && currentProject && layouts.length > 0) {
         console.log(`EditorPage: Saving layouts for current account ${currentAccount.id} before switching`)
-        setAccountLayouts((prev) => ({
-          ...prev,
-          [currentAccount.id]: {
-            layouts: layouts,
-            projectId: currentProject?.id || "",
-          },
-        }))
+
+        // Use a separate function to update account layouts to avoid circular dependencies
+        const updateAccountLayoutsBeforeSwitch = () => {
+          isUpdatingAccountLayoutsRef.current = true
+          setAccountLayouts((prev) => {
+            const newAccountLayouts = {
+              ...prev,
+              [currentAccount.id]: {
+                layouts: layouts,
+                projectId: currentProject?.id || "",
+              },
+            }
+
+            // Reset flag after update
+            setTimeout(() => {
+              isUpdatingAccountLayoutsRef.current = false
+            }, 0)
+
+            return newAccountLayouts
+          })
+        }
+
+        updateAccountLayoutsBeforeSwitch()
       }
 
       // 현재 계정 변경
@@ -539,61 +679,13 @@ export default function EditorPage() {
           return updatedLayouts
         })
 
-        // 계정 레이아웃 데이터 즉시 저장
-        if (currentAccount?.id) {
-          setAccountLayouts((prev) => {
-            const updatedLayouts =
-              prev[currentAccount.id]?.layouts.map((layout) => {
-                if (layout.id === layoutId) {
-                  // 기존 이미지를 사용자 업로드 이미지와 기존 피드 이미지로 분리
-                  const userUploadedImages = layout.images.filter((img) => img.isUserUploaded === true)
-                  const existingFeedImages = layout.images.filter((img) => img.isUserUploaded !== true)
-
-                  // 새 이미지를 사용자 업로드 이미지 앞에 추가하고, 기존 피드 이미지는 맨 뒤에 배치
-                  return {
-                    ...layout,
-                    images: [...validImages, ...userUploadedImages, ...existingFeedImages],
-                  }
-                }
-                return layout
-              }) || []
-
-            const result = {
-              ...prev,
-              [currentAccount.id]: {
-                layouts:
-                  updatedLayouts.length > 0
-                    ? updatedLayouts
-                    : layouts.map((layout) => {
-                        if (layout.id === layoutId) {
-                          // 기존 이미지를 사용자 업로드 이미지와 기존 피드 이미지로 분리
-                          const userUploadedImages = layout.images.filter((img) => img.isUserUploaded === true)
-                          const existingFeedImages = layout.images.filter((img) => img.isUserUploaded !== true)
-
-                          // 새 이미지를 사용자 업로드 이미지 앞에 추가하고, 기존 피드 이미지는 맨 뒤에 배치
-                          return {
-                            ...layout,
-                            images: [...validImages, ...userUploadedImages, ...existingFeedImages],
-                          }
-                        }
-                        return layout
-                      }),
-                projectId: currentProject.id,
-              },
-            }
-
-            console.log("EditorPage: Updated account layouts after adding images:", result)
-            return result
-          })
-        }
-
         // 간결한 피드백 메시지
         showFeedback(`${validImages.length}개의 이미지가 추가되었습니다`)
       } else {
         console.error("EditorPage: No current project found")
       }
     },
-    [addImagesToProject, currentProject, currentAccount, layouts, showFeedback],
+    [addImagesToProject, currentProject, showFeedback],
   )
 
   // 레이아웃 이미지 재정렬
@@ -619,32 +711,8 @@ export default function EditorPage() {
         console.log(`EditorPage: Updating project images after reordering`)
         reorderImages(currentProject.id, reorderedImages)
       }
-
-      // 계정 레이아웃 데이터 즉시 저장
-      if (currentAccount?.id) {
-        setAccountLayouts((prev) => {
-          const updatedLayouts =
-            prev[currentAccount.id]?.layouts.map((layout) => {
-              if (layout.id === layoutId) {
-                return { ...layout, images: [...reorderedImages] }
-              }
-              return layout
-            }) || []
-
-          const result = {
-            ...prev,
-            [currentAccount.id]: {
-              layouts: updatedLayouts.length > 0 ? updatedLayouts : layouts,
-              projectId: currentProject?.id || "",
-            },
-          }
-
-          console.log("EditorPage: Updated account layouts after reordering:", result)
-          return result
-        })
-      }
     },
-    [currentProject, reorderImages, currentAccount, layouts],
+    [currentProject, reorderImages],
   )
 
   // 레이아웃에서 이미지 제거
@@ -683,33 +751,6 @@ export default function EditorPage() {
           removeImage(currentProject.id, imageId)
         }
 
-        // 계정 레이아웃 데이터 즉시 저장
-        if (currentAccount?.id) {
-          setAccountLayouts((prev) => {
-            const updatedLayouts =
-              prev[currentAccount.id]?.layouts.map((layout) => {
-                if (layout.id === layoutId) {
-                  return {
-                    ...layout,
-                    images: layout.images.filter((img) => img.id !== imageId),
-                  }
-                }
-                return layout
-              }) || []
-
-            const result = {
-              ...prev,
-              [currentAccount.id]: {
-                layouts: updatedLayouts.length > 0 ? updatedLayouts : layouts,
-                projectId: currentProject?.id || "",
-              },
-            }
-
-            console.log("EditorPage: Updated account layouts after image removal:", result)
-            return result
-          })
-        }
-
         // 피드백 메시지
         showFeedback("Image removed")
       } else {
@@ -717,7 +758,7 @@ export default function EditorPage() {
         showFeedback("Only uploaded images can be removed")
       }
     },
-    [currentProject, layouts, removeImage, showFeedback, currentAccount],
+    [currentProject, layouts, removeImage, showFeedback],
   )
 
   // 레이아웃 복제 - 완전히 개선된 버전
@@ -769,24 +810,6 @@ export default function EditorPage() {
         return updatedLayouts
       })
 
-      // 계정 레이아웃 데이터 즉시 저장
-      if (currentAccount?.id && currentProject) {
-        setAccountLayouts((prev) => {
-          const updatedLayouts = [...(prev[currentAccount.id]?.layouts || []), duplicatedLayout]
-
-          const result = {
-            ...prev,
-            [currentAccount.id]: {
-              layouts: updatedLayouts,
-              projectId: currentProject.id,
-            },
-          }
-
-          console.log("EditorPage: Updated account layouts after duplication:", result)
-          return result
-        })
-      }
-
       // 새 레이아웃이 보이도록 스크롤 처리
       setTimeout(() => {
         const container = document.querySelector(".scrollbar-hide")
@@ -798,7 +821,7 @@ export default function EditorPage() {
       // 간결한 피드백 메시지
       showFeedback("Layout duplicated")
     },
-    [layouts, showFeedback, currentAccount, currentProject],
+    [layouts, showFeedback],
   )
 
   // 레이아웃 삭제
@@ -819,28 +842,10 @@ export default function EditorPage() {
         return updatedLayouts
       })
 
-      // 계정 레이아웃 데이터 즉시 저장
-      if (currentAccount?.id && currentProject) {
-        setAccountLayouts((prev) => {
-          const updatedLayouts = prev[currentAccount.id]?.layouts.filter((layout) => layout.id !== layoutId) || []
-
-          const result = {
-            ...prev,
-            [currentAccount.id]: {
-              layouts: updatedLayouts,
-              projectId: currentProject.id,
-            },
-          }
-
-          console.log("EditorPage: Updated account layouts after deletion:", result)
-          return result
-        })
-      }
-
       // 간결한 피드백 메시지
       showFeedback("Layout deleted")
     },
-    [layouts.length, showFeedback, currentAccount, currentProject],
+    [layouts.length, showFeedback],
   )
 
   // 페이지 언마운트 시 데이터 저장
@@ -851,6 +856,7 @@ export default function EditorPage() {
     return () => {
       // 진행 중인 모든 작업 취소
       isUpdatingLayoutsRef.current = false
+      isUpdatingAccountLayoutsRef.current = false
       pendingLayoutUpdateRef.current = null
       accountSwitchingRef.current = false
       isMountedRef.current = false
@@ -893,7 +899,7 @@ export default function EditorPage() {
       setActiveTab(tab)
 
       // 탭이 "layouts"일 때만 레이아웃 표시
-      if (tab === "layouts" && layouts.length === 0) {
+      if (tab === "layouts" && layouts.length === 0 && !initialLayoutCreatedRef.current) {
         createInitialLayout()
       }
 
