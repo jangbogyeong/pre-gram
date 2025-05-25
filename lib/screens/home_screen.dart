@@ -14,6 +14,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final PageController _pageController = PageController();
   String _selectedAccount = '@your_username';
+  bool _hasConnectedAccount = true;
   int _currentBoardIndex = 0;
   final List<String> _existingPosts =
       List.generate(21, (index) => 'post_$index');
@@ -137,6 +138,190 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _showAccountSelectionBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 16),
+              child: Text(
+                '계정 선택',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ),
+            if (_hasConnectedAccount) ...[
+              _buildAccountItem(
+                username: '@your_username',
+                isSelected: _selectedAccount == '@your_username',
+              ),
+              const SizedBox(height: 8),
+              _buildAccountItem(
+                username: '@second_account',
+                isSelected: _selectedAccount == '@second_account',
+              ),
+              const SizedBox(height: 20),
+              Container(
+                height: 1,
+                color: Colors.white.withOpacity(0.1),
+                margin: const EdgeInsets.only(bottom: 20),
+              ),
+            ],
+            _buildAddAccountButton(),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAccountItem({
+    required String username,
+    required bool isSelected,
+  }) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedAccount = username;
+        });
+        Navigator.pop(context);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF2A2A2A) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? Colors.white.withOpacity(0.15)
+                : Colors.transparent,
+            width: 1,
+          ),
+          gradient: isSelected
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF2A2A2A),
+                    const Color(0xFF1A1A1A),
+                  ],
+                )
+              : null,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    username,
+                    style: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : Colors.white.withOpacity(0.9),
+                      fontSize: 16,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w400,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '연결됨',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 14,
+                      letterSpacing: 0.1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check,
+                  color: Colors.blue,
+                  size: 20,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddAccountButton() {
+    return TextButton(
+      onPressed: () {
+        Navigator.pop(context);
+        Navigator.pushNamed(context, '/connected-accounts');
+      },
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        minimumSize: const Size.fromHeight(0),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.add,
+              color: Colors.blue,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Text(
+            '계정 추가하기',
+            style: TextStyle(
+              color: Colors.blue,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -146,34 +331,26 @@ class _HomeScreenState extends State<HomeScreen> {
         automaticallyImplyLeading: false,
         title: Align(
           alignment: Alignment.centerLeft,
-          child: DropdownButton<String>(
-            value: _selectedAccount,
-            dropdownColor: Colors.grey[900],
-            style: const TextStyle(color: Colors.white),
-            icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-            underline: Container(),
-            items: [
-              DropdownMenuItem(
-                value: '@your_username',
-                child: Row(
-                  children: [
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(_selectedAccount),
-                  ],
+          child: GestureDetector(
+            onTap: _showAccountSelectionBottomSheet,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _selectedAccount,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-            ],
-            onChanged: (String? newValue) {
-              // TODO: 계정 변경 로직 구현
-            },
+                const Icon(
+                  Icons.keyboard_arrow_down,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -188,18 +365,17 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           Container(
-            color: Colors.grey[900],
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SingleChildScrollView(
+            height: 56,
+            color: const Color(0xFF121212),
+            child: ListView(
               scrollDirection: Axis.horizontal,
-              child: Row(
-                children: List.generate(_boards.length, (index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 16),
-                    child: _buildBoardTab(index, 'Board ${index + 1}'),
-                  );
-                }),
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              children: List.generate(_boards.length, (index) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _buildBoardTab(index, 'Board ${index + 1}'),
+                );
+              }),
             ),
           ),
           Expanded(
@@ -333,14 +509,32 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue : Colors.transparent,
+          color: isSelected ? const Color(0xFF2A2A2A) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? Colors.white.withOpacity(0.15)
+                : Colors.transparent,
+            width: 1,
+          ),
+          gradient: isSelected
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF2A2A2A),
+                    const Color(0xFF1A1A1A),
+                  ],
+                )
+              : null,
         ),
         child: Text(
-          title,
+          'Board ${index + 1}',
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Colors.white : Colors.grey.shade500,
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            letterSpacing: 0.2,
           ),
         ),
       ),

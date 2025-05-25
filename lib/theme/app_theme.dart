@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // 색상
@@ -41,34 +40,33 @@ class AppTheme {
       ),
       iconTheme: IconThemeData(color: textColor),
     ),
-    cardTheme: CardTheme(
+    cardTheme: const CardThemeData(
       color: cardColor,
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8.0))),
     ),
     buttonTheme: ButtonThemeData(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
       buttonColor: primaryColor,
     ),
-    textTheme: GoogleFonts.robotoTextTheme(
-      ThemeData.light().textTheme.copyWith(
-        displayLarge: const TextStyle(color: textColor),
-        displayMedium: const TextStyle(color: textColor),
-        displaySmall: const TextStyle(color: textColor),
-        headlineLarge: const TextStyle(color: textColor),
-        headlineMedium: const TextStyle(color: textColor),
-        headlineSmall: const TextStyle(color: textColor),
-        titleLarge: const TextStyle(color: textColor),
-        titleMedium: const TextStyle(color: textColor),
-        titleSmall: const TextStyle(color: textColor),
-        bodyLarge: const TextStyle(color: textColor),
-        bodyMedium: const TextStyle(color: textColor),
-        bodySmall: const TextStyle(color: secondaryTextColor),
-        labelLarge: const TextStyle(color: textColor),
-        labelMedium: const TextStyle(color: textColor),
-        labelSmall: const TextStyle(color: secondaryTextColor),
-      ),
-    ),
+    textTheme: ThemeData.light().textTheme.copyWith(
+          displayLarge: const TextStyle(color: textColor),
+          displayMedium: const TextStyle(color: textColor),
+          displaySmall: const TextStyle(color: textColor),
+          headlineLarge: const TextStyle(color: textColor),
+          headlineMedium: const TextStyle(color: textColor),
+          headlineSmall: const TextStyle(color: textColor),
+          titleLarge: const TextStyle(color: textColor),
+          titleMedium: const TextStyle(color: textColor),
+          titleSmall: const TextStyle(color: textColor),
+          bodyLarge: const TextStyle(color: textColor),
+          bodyMedium: const TextStyle(color: textColor),
+          bodySmall: const TextStyle(color: secondaryTextColor),
+          labelLarge: const TextStyle(color: textColor),
+          labelMedium: const TextStyle(color: textColor),
+          labelSmall: const TextStyle(color: secondaryTextColor),
+        ),
     dividerTheme: const DividerThemeData(color: dividerColor, thickness: 0.5),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -120,16 +118,17 @@ class AppTheme {
       ),
       iconTheme: IconThemeData(color: Colors.white),
     ),
-    cardTheme: CardTheme(
-      color: const Color(0xFF1E1E1E),
+    cardTheme: const CardThemeData(
+      color: Color(0xFF1E1E1E),
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8.0))),
     ),
     buttonTheme: ButtonThemeData(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
       buttonColor: primaryColor,
     ),
-    textTheme: GoogleFonts.robotoTextTheme(ThemeData.dark().textTheme),
+    textTheme: ThemeData.dark().textTheme,
     dividerTheme: const DividerThemeData(
       color: Color(0xFF2C2C2C),
       thickness: 0.5,

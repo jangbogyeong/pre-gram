@@ -37,9 +37,9 @@ class MyApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,
-        initialRoute: '/splash',
+        initialRoute: '/',
         routes: {
-          '/splash': (context) => const SplashScreen(),
+          '/': (context) => const SplashScreen(),
           '/login': (context) => const LoginScreen(),
           '/connect-instagram': (context) => const ConnectInstagramScreen(),
           '/feed': (context) => const FeedScreen(),
