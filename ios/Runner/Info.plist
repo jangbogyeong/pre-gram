@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Pre-Gram</string>
+	<string>Pre-gram</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -31,8 +31,6 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
@@ -48,18 +46,17 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	
-	<!-- 딥링크 설정 -->
+	<!-- URL Scheme 설정 -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLName</key>
-			<string>pregram</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>pregram</string>
+				<string>pre-gram</string>
+				<string>com.googleusercontent.apps.834199766597-ijk9j4g54qq74djem4tjgl6q9ph9cm6i</string>
 			</array>
+			<key>CFBundleURLName</key>
+			<string>com.artxwork.pregram</string>
 		</dict>
 	</array>
 	
@@ -70,18 +67,5 @@
 	<string>게시물 업로드를 위해 갤러리 접근 권한이 필요합니다.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>편집한 이미지를 저장하기 위해 갤러리 접근 권한이 필요합니다.</string>
-	
-	<!-- Google 로그인 설정 -->
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.YOUR-GOOGLE-CLIENT-ID</string>
-			</array>
-		</dict>
-	</array>
 </dict>
 </plist> 

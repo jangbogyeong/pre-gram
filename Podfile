@@ -31,6 +31,9 @@ target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
+  pod 'Firebase/Core', '10.25.0'
+  pod 'Firebase/Auth', '10.25.0'
+
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
     inherit! :search_paths
@@ -55,4 +58,4 @@ post_install do |installer|
       ]
     end
   end
-end
+end 

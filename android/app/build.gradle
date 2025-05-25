@@ -21,10 +21,12 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
-apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
-apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
-apply plugin: 'com.google.gms.google-services'
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id 'com.google.gms.google-services'  // Google Services plugin
+}
 
 android {
     namespace "com.example.pre_gram"
@@ -46,7 +48,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.pre_gram"
-        minSdkVersion 21
+        minSdkVersion 21  // Firebase requires minimum SDK 21
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName

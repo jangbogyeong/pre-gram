@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService extends ChangeNotifier {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+
   bool _isLoading = false;
   String? _error;
   String? _currentUser;
@@ -64,29 +69,35 @@ class AuthService extends ChangeNotifier {
   }
 
   // 구글 로그인
-  Future<void> signInWithGoogle(BuildContext context) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
+  Future<UserCredential?> signInWithGoogle(BuildContext context) async {
     try {
-      // TODO: 실제 구글 로그인 구현
-      await Future.delayed(const Duration(seconds: 1)); // 임시 지연
-      _currentUser = 'google_user@example.com';
+      // 구글 로그인 다이얼로그 표시
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_email', _currentUser!);
+      // 구글 인증 정보 획득
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
-      if (context.mounted) {
+      // Firebase 인증 정보 생성
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Firebase 로그인 수행
+      final userCredential = await _auth.signInWithCredential(credential);
+
+      // 로그인 성공 시 화면 전환
+      if (userCredential.user != null && context.mounted) {
         Navigator.of(context).pushReplacementNamed('/connect-instagram');
       }
-    } catch (e) {
-      _error = '구글 로그인 중 오류가 발생했습니다.';
-      print('구글 로그인 오류: $e');
-    }
 
-    _isLoading = false;
-    notifyListeners();
+      return userCredential;
+    } catch (e) {
+      print('Google sign in error: $e');
+      return null;
+    }
   }
 
   // 애플 로그인
@@ -218,5 +229,16 @@ class AuthService extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  // 인증 상태 스트림
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  // 로그아웃
+  Future<void> signOut() async {
+    await Future.wait([
+      _auth.signOut(),
+      _googleSignIn.signOut(),
+    ]);
   }
 }
