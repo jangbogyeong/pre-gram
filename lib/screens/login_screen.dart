@@ -80,7 +80,13 @@ class LoginScreen extends StatelessWidget {
                       context: context,
                       text: 'Sign in with Google',
                       icon: const Icon(Icons.g_mobiledata, size: 24),
-                      onPressed: () => auth.signInWithGoogle(context),
+                      onPressed: () async {
+                        final result = await auth.signInWithGoogle(context);
+                        if (result != null && context.mounted) {
+                          Navigator.of(context)
+                              .pushReplacementNamed('/connect-instagram');
+                        }
+                      },
                     ),
                     const SizedBox(height: 16),
 

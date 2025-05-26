@@ -9,15 +9,20 @@ class AuthService extends ChangeNotifier {
 
   bool _isLoading = false;
   String? _error;
-  String? _currentUser;
+  User? _firebaseUser;
 
   bool get isLoading => _isLoading;
-  bool get isLoggedIn => _currentUser != null;
+  bool get isLoggedIn => _firebaseUser != null;
   String? get error => _error;
-  String? get currentUser => _currentUser;
+  User? get currentUser => _firebaseUser;
 
   AuthService() {
     _init();
+    // Firebase Auth 상태 변경 감지
+    _auth.authStateChanges().listen((User? user) {
+      _firebaseUser = user;
+      notifyListeners();
+    });
   }
 
   Future<void> _init() async {
@@ -25,8 +30,7 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      _currentUser = prefs.getString('user_email');
+      _firebaseUser = _auth.currentUser;
     } catch (e) {
       _error = '자동 로그인 중 오류가 발생했습니다.';
       print('자동 로그인 오류: $e');
@@ -49,7 +53,7 @@ class AuthService extends ChangeNotifier {
       final savedPassword = prefs.getString('registered_password');
 
       if (savedEmail == email && savedPassword == password) {
-        _currentUser = email;
+        _firebaseUser = _auth.currentUser;
         await prefs.setString('user_email', email);
         _isLoading = false;
         notifyListeners();
@@ -87,12 +91,6 @@ class AuthService extends ChangeNotifier {
 
       // Firebase 로그인 수행
       final userCredential = await _auth.signInWithCredential(credential);
-
-      // 로그인 성공 시 화면 전환
-      if (userCredential.user != null && context.mounted) {
-        Navigator.of(context).pushReplacementNamed('/connect-instagram');
-      }
-
       return userCredential;
     } catch (e) {
       print('Google sign in error: $e');
@@ -109,10 +107,10 @@ class AuthService extends ChangeNotifier {
     try {
       // TODO: 실제 애플 로그인 구현
       await Future.delayed(const Duration(seconds: 1)); // 임시 지연
-      _currentUser = 'apple_user@example.com';
+      _firebaseUser = _auth.currentUser;
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_email', _currentUser!);
+      await prefs.setString('user_email', _firebaseUser!.email!);
 
       if (context.mounted) {
         Navigator.of(context).pushReplacementNamed('/connect-instagram');
@@ -135,10 +133,10 @@ class AuthService extends ChangeNotifier {
     try {
       // TODO: 실제 페이스북 로그인 구현
       await Future.delayed(const Duration(seconds: 1)); // 임시 지연
-      _currentUser = 'facebook_user@example.com';
+      _firebaseUser = _auth.currentUser;
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_email', _currentUser!);
+      await prefs.setString('user_email', _firebaseUser!.email!);
 
       if (context.mounted) {
         Navigator.of(context).pushReplacementNamed('/connect-instagram');
@@ -159,10 +157,10 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _currentUser = 'guest_user';
+      _firebaseUser = _auth.currentUser;
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_email', _currentUser!);
+      await prefs.setString('user_email', _firebaseUser!.email!);
 
       if (context.mounted) {
         Navigator.of(context).pushReplacementNamed('/connect-instagram');
@@ -182,11 +180,14 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('user_email');
-      _currentUser = null;
+      await Future.wait([
+        _auth.signOut(),
+        _googleSignIn.signOut(),
+      ]);
+      _firebaseUser = null;
     } catch (e) {
       _error = '로그아웃 중 오류가 발생했습니다.';
+      print('로그아웃 오류: $e');
     }
 
     _isLoading = false;
@@ -217,8 +218,8 @@ class AuthService extends ChangeNotifier {
       await prefs.setString('registered_username', username);
 
       // 자동 로그인
-      _currentUser = email;
-      await prefs.setString('user_email', email);
+      _firebaseUser = _auth.currentUser;
+      await prefs.setString('user_email', _firebaseUser!.email!);
 
       _isLoading = false;
       notifyListeners();
