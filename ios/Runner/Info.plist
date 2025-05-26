@@ -46,6 +46,10 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	
+	<!-- Google Sign In -->
+	<key>GIDClientID</key>
+	<string>834199766597-ijk9j4g54qq74djem4tjgl6q9ph9cm6i.apps.googleusercontent.com</string>
+	
 	<!-- URL Scheme 설정 -->
 	<key>CFBundleURLTypes</key>
 	<array>
