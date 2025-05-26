@@ -12,7 +12,7 @@ class AuthService extends ChangeNotifier {
   User? _firebaseUser;
 
   bool get isLoading => _isLoading;
-  bool get isLoggedIn => _firebaseUser != null;
+  bool get isLoggedIn => _auth.currentUser != null;
   String? get error => _error;
   User? get currentUser => _firebaseUser;
 
@@ -151,27 +151,33 @@ class AuthService extends ChangeNotifier {
   }
 
   // 게스트 로그인
-  Future<void> signInAsGuest(BuildContext context) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
+  Future<bool> signInAsGuest(BuildContext context) async {
     try {
-      _firebaseUser = _auth.currentUser;
+      print('게스트 로그인 시작');
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
 
+      // 게스트 사용자 정보 임시 저장
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_email', _firebaseUser!.email!);
+      final guestId = DateTime.now().millisecondsSinceEpoch.toString();
+      await prefs.setString('user_type', 'guest');
+      await prefs.setString('guest_id', guestId);
+      print('게스트 정보 저장 완료: $guestId');
 
-      if (context.mounted) {
-        Navigator.of(context).pushReplacementNamed('/connect-instagram');
-      }
+      // 게스트 상태 설정
+      _firebaseUser = null; // Firebase 사용자는 null로 설정
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
     } catch (e) {
-      _error = '게스트 로그인 중 오류가 발생했습니다.';
-      print('게스트 로그인 오류: $e');
+      print('게스트 로그인 오류 발생: $e');
+      _error = null;
+      _isLoading = false;
+      notifyListeners();
+      return false;
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   // 로그아웃
@@ -241,5 +247,38 @@ class AuthService extends ChangeNotifier {
       _auth.signOut(),
       _googleSignIn.signOut(),
     ]);
+  }
+
+  // 완전한 로그아웃 (모든 캐시와 세션 삭제)
+  Future<void> completeLogout() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      // SharedPreferences 초기화
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      // 구글 로그인 로그아웃
+      await _googleSignIn.signOut();
+
+      // 구글 로그인 연결 해제
+      await _googleSignIn.disconnect();
+
+      // Firebase 로그아웃
+      await _auth.signOut();
+
+      // Firebase 캐시 초기화
+      await FirebaseAuth.instance.signOut();
+
+      _firebaseUser = null;
+    } catch (e) {
+      _error = '로그아웃 중 오류가 발생했습니다.';
+      print('완전 로그아웃 오류: $e');
+    }
+
+    _isLoading = false;
+    notifyListeners();
   }
 }

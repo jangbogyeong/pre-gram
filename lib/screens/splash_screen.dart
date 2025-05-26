@@ -15,50 +15,46 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _checkAuthAndNavigate();
+    _initializeAndNavigate();
   }
 
-  Future<void> _checkAuthAndNavigate() async {
-    await Future.delayed(const Duration(seconds: 2));
+  Future<void> _initializeAndNavigate() async {
     if (!mounted) return;
 
     final authService = Provider.of<AuthService>(context, listen: false);
-    final authProvider =
-        Provider.of<instagram_auth.AuthProvider>(context, listen: false);
-    final firebaseUser = FirebaseAuth.instance.currentUser;
 
-    if (firebaseUser == null) {
-      // Firebase에 로그인되지 않은 경우
-      Navigator.of(context).pushReplacementNamed('/login');
-    } else if (!authProvider.isAuthenticated) {
-      // Firebase 로그인은 되어있지만 인스타그램 연동이 안된 경우
-      Navigator.of(context).pushReplacementNamed('/connect-instagram');
-    } else {
-      // 모든 인증이 완료된 경우
-      Navigator.of(context).pushReplacementNamed('/home');
-    }
+    // 완전한 로그아웃 수행
+    await authService.completeLogout();
+
+    // 2초 지연
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    // 로그인 화면으로 이동
+    Navigator.of(context).pushReplacementNamed('/login');
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       backgroundColor: Colors.black,
       body: Center(
-        child: Image.asset(
-          'assets/images/pregram_logo.png',
-          width: 200,
-          height: 50,
-          errorBuilder: (context, error, stackTrace) {
-            print('Error loading logo: $error');
-            return const Text(
-              'Pre-gram',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            );
-          },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // 앱 로고
+            Image(
+              image: AssetImage('assets/images/pregram_logo.png'),
+              width: 200,
+              height: 50,
+            ),
+            SizedBox(height: 24),
+            // 로딩 인디케이터
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          ],
         ),
       ),
     );

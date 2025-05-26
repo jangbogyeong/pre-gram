@@ -117,6 +117,97 @@ class LoginScreen extends StatelessWidget {
                         fontSize: 12,
                       ),
                     ),
+                    const SizedBox(height: 24),
+
+                    // 구분선과 게스트 로그인 버튼
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Divider(
+                            color: Colors.grey,
+                            thickness: 0.5,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'or',
+                            style: TextStyle(
+                              color: Colors.grey.shade400,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        const Expanded(
+                          child: Divider(
+                            color: Colors.grey,
+                            thickness: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // 게스트 로그인 버튼
+                    TextButton(
+                      onPressed: () async {
+                        // 게스트 로그인 경고 다이얼로그
+                        final shouldContinue = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            backgroundColor: const Color(0xFF1E1E1E),
+                            title: const Text(
+                              '게스트 로그인',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            content: const Text(
+                              '게스트로 로그인하면 피드 편집 내용이 저장되지 않습니다. 인스타그램 계정 연동은 필수입니다.\n\n계속하시겠습니까?',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(false),
+                                child: const Text(
+                                  '취소',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(true),
+                                child: const Text(
+                                  '계속하기',
+                                  style: TextStyle(color: Colors.blue),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        print('게스트 로그인 다이얼로그 결과: $shouldContinue');
+
+                        if (shouldContinue == true && context.mounted) {
+                          print('게스트 로그인 시작');
+                          final success = await auth.signInAsGuest(context);
+                          print('게스트 로그인 결과: $success');
+
+                          if (success && context.mounted) {
+                            print('인스타그램 연동 페이지로 이동');
+                            Navigator.of(context)
+                                .pushReplacementNamed('/connect-instagram');
+                          }
+                        }
+                      },
+                      child: Text(
+                        'Continue as Guest',
+                        style: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 16,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -135,22 +226,29 @@ class LoginScreen extends StatelessWidget {
   }) {
     return SizedBox(
       width: double.infinity,
-      height: 48,
+      height: 50,
       child: ElevatedButton(
-        onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.grey[900],
+          backgroundColor: Colors.black,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
+          side: const BorderSide(color: Colors.white, width: 1),
         ),
+        onPressed: onPressed,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             icon,
             const SizedBox(width: 12),
-            Text(text),
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
