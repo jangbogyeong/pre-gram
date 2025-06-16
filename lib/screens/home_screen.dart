@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:pre_gram/services/auth_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -14,7 +12,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final PageController _pageController = PageController();
   String _selectedAccount = '@your_username';
-  bool _hasConnectedAccount = true;
+  final bool _hasConnectedAccount = true;
   int _currentBoardIndex = 0;
   final List<String> _existingPosts =
       List.generate(21, (index) => 'post_$index');
@@ -82,9 +80,9 @@ class _HomeScreenState extends State<HomeScreen> {
         // 선택한 순서 그대로 유지하되, 리스트는 역순으로 추가
         final newImages = pickedFiles.map((file) => file.path).toList();
         // 리스트를 반전시켜서 첫 번째 선택한 이미지가 맨 앞에 오도록 함
-        newImages.reversed.forEach((path) {
+        for (var path in newImages.reversed) {
           _newPosts.insert(0, path);
-        });
+        }
 
         // 현재 활성화된 보드에 새 이미지 추가
         _boards[_currentBoardIndex] = _newPosts;
@@ -223,12 +221,12 @@ class _HomeScreenState extends State<HomeScreen> {
             width: 1,
           ),
           gradient: isSelected
-              ? LinearGradient(
+              ? const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFF2A2A2A),
-                    const Color(0xFF1A1A1A),
+                    Color(0xFF2A2A2A),
+                    Color(0xFF1A1A1A),
                   ],
                 )
               : null,
@@ -440,9 +438,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
         if (isNewPost) {
           return DragTarget<int>(
-            onAccept: (data) {
+            onAcceptWithDetails: (details) {
               setState(() {
-                final item = _newPosts.removeAt(data);
+                final draggedIndex = details.data;
+                final item = _newPosts.removeAt(draggedIndex);
                 _newPosts.insert(index, item);
 
                 // 보드에 변경사항 반영
@@ -518,12 +517,12 @@ class _HomeScreenState extends State<HomeScreen> {
             width: 1,
           ),
           gradient: isSelected
-              ? LinearGradient(
+              ? const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFF2A2A2A),
-                    const Color(0xFF1A1A1A),
+                    Color(0xFF2A2A2A),
+                    Color(0xFF1A1A1A),
                   ],
                 )
               : null,

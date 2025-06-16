@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pre_gram/services/auth_service.dart';
-import 'package:pre_gram/providers/auth_provider.dart' as instagram_auth;
-import 'package:firebase_auth/firebase_auth.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,7 +13,9 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeAndNavigate();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeAndNavigate();
+    });
   }
 
   Future<void> _initializeAndNavigate() async {
@@ -23,8 +23,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
     final authService = Provider.of<AuthService>(context, listen: false);
 
-    // 완전한 로그아웃 수행
-    await authService.completeLogout();
+    // 로그아웃 수행
+    await authService.logout();
 
     // 2초 지연
     await Future.delayed(const Duration(seconds: 2));

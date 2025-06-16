@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>834199766597-ijk9j4g54qq74djem4tjgl6q9ph9cm6i.apps.googleusercontent.com</string>
+	<string>834199766597-s9v80vou7d841bj2r85jtip6tdjnaq2m.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.834199766597-ijk9j4g54qq74djem4tjgl6q9ph9cm6i</string>
+	<string>com.googleusercontent.apps.834199766597-s9v80vou7d841bj2r85jtip6tdjnaq2m</string>
 	<key>API_KEY</key>
 	<string>AIzaSyB6-ec8tAyXlsabV8XKb5iNrOa3GRMdrzI</string>
 	<key>GCM_SENDER_ID</key>
@@ -13,7 +13,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.artxwork.pregram</string>
+	<string>com.example.preGram</string>
 	<key>PROJECT_ID</key>
 	<string>pregram-a4954</string>
 	<key>STORAGE_BUCKET</key>
@@ -29,8 +29,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:834199766597:ios:08cbf3242b6ac62c27c52c</string>
-	<key>GIDClientID</key>
-	<string>834199766597-ijk9j4g54qq74djem4tjgl6q9ph9cm6i.apps.googleusercontent.com</string>
+	<string>1:834199766597:ios:7231950aab8afea727c52c</string>
 </dict>
 </plist>

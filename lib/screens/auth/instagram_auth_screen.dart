@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:pre_gram/services/instagram_service.dart';
-import 'package:pre_gram/providers/auth_provider.dart';
 
 class InstagramAuthScreen extends StatelessWidget {
   const InstagramAuthScreen({super.key});

@@ -81,11 +81,7 @@ class LoginScreen extends StatelessWidget {
                       text: 'Sign in with Google',
                       icon: const Icon(Icons.g_mobiledata, size: 24),
                       onPressed: () async {
-                        final result = await auth.signInWithGoogle(context);
-                        if (result != null && context.mounted) {
-                          Navigator.of(context)
-                              .pushReplacementNamed('/connect-instagram');
-                        }
+                        await auth.signInWithGoogle(context);
                       },
                     ),
                     const SizedBox(height: 16),
@@ -95,7 +91,13 @@ class LoginScreen extends StatelessWidget {
                       context: context,
                       text: 'Sign in with Apple',
                       icon: const Icon(Icons.apple, size: 24),
-                      onPressed: () => auth.signInWithApple(context),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('애플 로그인은 아직 지원되지 않습니다.'),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 16),
 
@@ -104,7 +106,13 @@ class LoginScreen extends StatelessWidget {
                       context: context,
                       text: 'Sign in with Facebook',
                       icon: const Icon(Icons.facebook, size: 24),
-                      onPressed: () => auth.signInWithFacebook(context),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('페이스북 로그인은 아직 지원되지 않습니다.'),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 48),
 

@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:pre_gram/services/auth_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -10,8 +8,8 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  String _selectedTheme = '다크 모드';
-  String _selectedLanguage = '한국어';
+  final String _selectedTheme = '다크 모드';
+  final String _selectedLanguage = '한국어';
 
   @override
   Widget build(BuildContext context) {

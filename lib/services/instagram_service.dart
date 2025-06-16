@@ -12,7 +12,7 @@ class InstagramService {
 
   // OAuth 인증 URL
   static String get authorizationUrl {
-    final redirectUri = 'YOUR_REDIRECT_URI'; // 앱의 OAuth 리다이렉트 URI
+    const redirectUri = 'YOUR_REDIRECT_URI'; // 앱의 OAuth 리다이렉트 URI
     return 'https://api.instagram.com/oauth/authorize?'
         'client_id=$_appId'
         '&redirect_uri=$redirectUri'

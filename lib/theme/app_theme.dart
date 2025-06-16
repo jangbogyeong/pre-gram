@@ -15,15 +15,13 @@ class AppTheme {
   // 라이트 테마
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
-    colorScheme: ColorScheme.light(
+    colorScheme: const ColorScheme.light(
       primary: primaryColor,
       secondary: accentColor,
-      background: backgroundColor,
       surface: cardColor,
       error: errorColor,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
-      onBackground: textColor,
       onSurface: textColor,
       onError: Colors.white,
     ),
@@ -93,15 +91,13 @@ class AppTheme {
   // 다크 테마
   static final ThemeData darkTheme = ThemeData(
     useMaterial3: true,
-    colorScheme: ColorScheme.dark(
+    colorScheme: const ColorScheme.dark(
       primary: primaryColor,
       secondary: accentColor,
-      background: const Color(0xFF121212),
-      surface: const Color(0xFF1E1E1E),
+      surface: Color(0xFF1E1E1E),
       error: errorColor,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
-      onBackground: Colors.white,
       onSurface: Colors.white,
       onError: Colors.white,
     ),
